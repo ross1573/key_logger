@@ -1,11 +1,24 @@
-#include "KeyLogger.h"
+#include <chrono>
+
+#include "key_logger"
 
 
-void press_callback(KEY_CODE key) {
-    std::cout << "Key pressed: " << KeyLogger::convertToString(key) << std::endl;
+void example_press(event::key key) {
+    std::cout << "Key Pressed: " << event::string(key) << ", " << key << std::endl;
+}
+
+void example_release(event::key key) {
+    std::cout << "Key Released: " << event::string(key) << std::endl;
 }
 
 
 int main() {
-    KeyLogger::getInstance()->setPressCallback(press_callback)->run(false);
+    auto logger = key_logger<key_deque, void, event::action::key_down>();
+    logger.start();
+    
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::cout << logger.get_string() << std::endl;
+        logger.clear();
+    }
 }
