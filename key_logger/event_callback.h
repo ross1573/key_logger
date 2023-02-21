@@ -5,6 +5,9 @@
 
 #include "event_logger.h"
 
+#define _REQUIRE_MASK_NOT_EMPTY \
+    requires (sizeof...(_Mask) > 0)
+
 
 template <typename _FuncT, std::size_t... _Mask>
 class event_callback {
@@ -36,7 +39,21 @@ void event_callback<_FuncT, _Mask...>::set_callback(callback __c) {
 }
 
 
-template <std::size_t... _Mask>
+template <typename _FuncT>
+class event_callback<_FuncT> {
+public:
+    typedef std::function<_FuncT>   callback;
+    typedef event::key              key;
+    typedef event::action           action;
+    
+protected:
+    event_callback() = default;
+    virtual ~event_callback() = default;
+    virtual void invoke_callback(const key&, const action&) { /* Undefined */ }
+};
+
+
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 class event_callback<void, _Mask...> {
 public:
     typedef event::key      key;
@@ -50,7 +67,7 @@ protected:
 };
 
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 class event_callback<void(typename event::key), _Mask...> {
 public:
     typedef event::key              key;
@@ -73,14 +90,14 @@ public:
 };
 
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 template <std::size_t _I>
 void event_callback<void(typename event::key), _Mask...>
 ::set_callback(callback __c) {
     __f_[_I] = __c;
 }
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 void event_callback<void(typename event::key), _Mask...>
 ::invoke_callback(const key& __k, const action& __a) {
     for (int i = 0; i < sizeof...(_Mask); i++) {
@@ -94,7 +111,7 @@ void event_callback<void(typename event::key), _Mask...>
 }
 
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 class event_callback<void(typename event::action), _Mask...> {
 public:
     typedef event::key                  key;
@@ -117,14 +134,14 @@ public:
 };
 
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 template <std::size_t _I>
 void event_callback<void(typename event::action), _Mask...>
 ::set_callback(callback __c) {
     __f_[_I] = __c;
 }
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 void event_callback<void(typename event::action), _Mask...>
 ::invoke_callback(const key& __k, const action& __a) {
     for (int i = 0; i < sizeof...(_Mask); i++) {
@@ -138,7 +155,7 @@ void event_callback<void(typename event::action), _Mask...>
 }
 
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 class event_callback<void(typename event::key,
                           typename event::action), _Mask...> {
 public:
@@ -161,14 +178,14 @@ public:
 };
 
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 void event_callback<void(typename event::key,
                          typename event::action), _Mask...>
 ::set_callback(callback __c) {
     __f_ = __c;
 }
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 void event_callback<void(typename event::key,
                          typename event::action), _Mask...>
 ::invoke_callback(const key& __k, const action& __a) {
@@ -176,7 +193,7 @@ void event_callback<void(typename event::key,
 }
 
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 class event_callback<void(typename event::action,
                           typename event::key), _Mask...> {
 public:
@@ -199,14 +216,14 @@ public:
 };
 
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 void event_callback<void(typename event::action,
                          typename event::key), _Mask...>
 ::set_callback(callback __c) {
     __f_ = __c;
 }
 
-template <std::size_t... _Mask>
+template <std::size_t... _Mask> _REQUIRE_MASK_NOT_EMPTY
 void event_callback<void(typename event::action,
                          typename event::key), _Mask...>
 ::invoke_callback(const key& __k, const action& __a) {
