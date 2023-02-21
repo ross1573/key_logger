@@ -21,7 +21,7 @@ example_logger.start();
 ```
 -----
 ## Supported Features  
-Container Types
+### Container Types
 - Stored Containers
   - vector
     ~~~
@@ -48,7 +48,7 @@ Container Types
     key_bitset = std::bitset<event::code_size>
     ~~~
   
-Callback Function Types
+### Callback Function Types
 - void
   ~~~
   cannot register callback function, non callback function will be invoked
@@ -63,7 +63,7 @@ Callback Function Types
   void(event::key, event::action)
   ~~~
   
-Event Masks
+### Event Masks
 - Key press
   ~~~
   event::action::key_down
