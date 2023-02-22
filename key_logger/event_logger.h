@@ -62,8 +62,9 @@ private:
     void __start_();
     void __stop_();
     
+    static const constexpr long long __create_mask_bit();
+    
 #ifdef _APPL
-    constexpr long long __create_mask_bit() const;
     void __init_darwin();
     static CGEventRef __callback_darwin(CGEventTapProxy, CGEventType, CGEventRef, void*);
 #elif defined _WIN
@@ -134,16 +135,16 @@ void __event_logger_base<_Key, _Act, _Mask...>::__init_() {
 #endif
 }
 
-#ifdef _APPL
 template <typename _Key, typename _Act, std::size_t... _Mask>
-constexpr long long __event_logger_base<_Key, _Act, _Mask...>::__create_mask_bit() const {
-    long long __mb = sizeof...(_Mask) == 0 ? 0 : CGEventMaskBit(kCGEventFlagsChanged);
-    for (auto& e : callback_mask<_Mask...>::value) {
-        __mb |= CGEventMaskBit(e);
+const constexpr long long __event_logger_base<_Key, _Act, _Mask...>::__create_mask_bit() {
+    long long __mb = 0;
+    for (auto& __e : callback_mask<_Mask...>::value) {
+        __mb |= _EVENT_MASK_BIT(__e);
     }
     return __mb;
 }
 
+#ifdef _APPL
 template <typename _Key, typename _Act, std::size_t... _Mask>
 void __event_logger_base<_Key, _Act, _Mask...>::__init_darwin() {
     CFMachPortRef __e = CGEventTapCreate(kCGSessionEventTap,
@@ -193,19 +194,13 @@ void __event_logger_base<_Key, _Act, _Mask...>::__init_win32() {
 template <typename _Key, typename _Act, std::size_t... _Mask>
 LRESULT CALLBACK __event_logger_base<_Key, _Act, _Mask...>
 ::__callback_win32(int __c, WPARAM __w, LPARAM __l) {
-    if (__c != HC_ACTION) return CallNextHookEx(NULL, __c, __w, __l); 
-    _Act __a = (_Act)__w;
-    bool __f = false;
-    for (auto& __e : callback_mask<_Mask...>::value) {
-        if (__a == __e) {
-            __f = true;
-            break;
+    if (__c != HC_ACTION)
+        return CallNextHookEx(NULL, __c, __w, __l);
+    
+    if (__create_mask_bit() & _EVENT_MASK_BIT(__w)) {   
+        for (auto& __c : __i_->__v_) {
+            __c(__w, __l);
         }
-    }
-    if (!__f) return CallNextHookEx(NULL, __c, __w, __l);
-
-    for (auto& __c : __i_->__v_) {
-        __c(__w, __l);
     }
     return CallNextHookEx(NULL, __c, __w, __l);
 }
@@ -223,7 +218,7 @@ protected:
     typedef typename _Base::event_type                  event_type;
     typedef typename _Base::event_ref                   event_ref;
     
-private:
+protected:
     bool __s_;
     iterator __i_;
     

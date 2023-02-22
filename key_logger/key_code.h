@@ -3,9 +3,11 @@
 
 #ifdef  __APPLE__
 #   define _APPL
+#   define _EVENT_MASK_BIT(x) CGEventMaskBit(x)
 #   include <ApplicationServices/ApplicationServices.h>
 #elif _WIN32
 #   define _WIN
+#   define _EVENT_MASK_BIT(x) ((__int64)1 << (x & 0x00FF))
 #   define NOMINMAX
 #   include <windows.h>
 #endif

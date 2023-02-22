@@ -23,15 +23,23 @@ typedef std::deque<event::action>               action_deque;
 
 template <std::size_t... _Mask>
 class __key_logger
+#ifdef _APPL
+: public __event_logger<event::key, event::action, kCGEventFlagsChanged, _Mask...> {
+#else
 : public __event_logger<event::key, event::action, _Mask...> {
+#endif
 private:
-    typedef __event_logger<event::key, event::action, _Mask...>         _Base;
-    typedef typename _Base::event_field                                 event_field;
-    typedef typename _Base::event_type                                  event_type;
-    typedef typename _Base::event_ref                                   event_ref;
+#ifdef _APPL
+    typedef __event_logger<event::key, event::action, kCGEventFlagsChanged, _Mask...> _Base;
+#else
+    typedef __event_logger<event::key, event::action, _Mask...> _Base;
+#endif
+    typedef typename _Base::event_field                         event_field;
+    typedef typename _Base::event_type                          event_type;
+    typedef typename _Base::event_ref                           event_ref;
 public:
-    typedef event::key                                                  key;
-    typedef event::action                                               action;
+    typedef event::key                                          key;
+    typedef event::action                                       action;
     
 protected:
     __key_logger();
@@ -46,7 +54,7 @@ private:
 };
 
 
-template <std::size_t... _Mask> 
+template <std::size_t... _Mask>
 __key_logger<_Mask...>::__key_logger() {
 #ifdef _APPL
 //
@@ -73,6 +81,38 @@ void __key_logger<_Mask...>::__event_callback(const event_type& __t, const event
     __key_event_callback(__k, __a);
 #endif
 }
+    
+    
+template <>
+class __key_logger <>
+: public __event_logger<event::key, event::action> {
+private:
+    typedef __event_logger<event::key, event::action>           _Base;
+    typedef typename _Base::event_field                         event_field;
+    typedef typename _Base::event_type                          event_type;
+    typedef typename _Base::event_ref                           event_ref;
+public:
+    typedef event::key                                          key;
+    typedef event::action                                       action;
+    
+protected:
+    __key_logger() = default;
+    virtual ~__key_logger() = default;
+    virtual void __key_event_callback(const key&, const action&) = 0;
+
+public:
+    inline bool is_running();
+    
+private:
+    void __event_callback(const event_type&, const event_ref&) override;
+};
+    
+    
+bool __key_logger<>::is_running() {
+    return _Base::__s_;
+}
+    
+void __key_logger<>::__event_callback(const event_type& __t, const event_ref& __e) { /* Undefined */ }
 
 
 template <typename _ConT, typename _FuncT, std::size_t... _Mask>
