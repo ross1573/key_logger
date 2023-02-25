@@ -141,7 +141,7 @@ protected:
     
 public:
     value_type pop();
-    container_type& get();
+    container_type& get_container();
     split_container get_all();
     
     bool empty();
@@ -163,7 +163,7 @@ container<std::queue<_T>>::pop() {
 
 template <typename _T>
 typename container<std::queue<_T>>::container_type&
-container<std::queue<_T>>::get() {
+container<std::queue<_T>>::get_container() {
     return __c_;
 }
 
@@ -224,7 +224,7 @@ public:
     value_type pop();
     value_type pop_back();
     value_type at(std::size_t);
-    container_type& get();
+    container_type& get_container();
     split_container get_all();
     std::string get_string();
     
@@ -270,7 +270,7 @@ container<std::deque<_T>>::erase(std::size_t __i) {
 
 template <typename _T>
 typename container<std::deque<_T>>::container_type&
-container<std::deque<_T>>::get() {
+container<std::deque<_T>>::get_container() {
     return __c_;
 }
 
@@ -341,7 +341,7 @@ protected:
 public:
     split_container pop(std::size_t);
     value_type at(std::size_t);
-    container_type& get();
+    container_type& get_container();
     split_container get_all();
     std::string get_string();
     split_container at(std::size_t, std::size_t);
@@ -374,7 +374,7 @@ container<std::vector<_T>>::at(std::size_t __i) {
 
 template <typename _T>
 typename container<std::vector<_T>>::container_type&
-container<std::vector<_T>>::get() {
+container<std::vector<_T>>::get_container() {
     return __c_;
 }
 
@@ -455,7 +455,7 @@ protected:
     
 public:
     value_type at(std::size_t);
-    container_type get();
+    container_type get_container();
     void clear();
     constexpr std::size_t size() const;
     
@@ -471,7 +471,7 @@ container<std::bitset<_Size>>::at(std::size_t __i) {
 
 template <std::size_t _Size>
 typename container<std::bitset<_Size>>::container_type
-container<std::bitset<_Size>>::get() {
+container<std::bitset<_Size>>::get_container() {
     return __c_;
 }
 
@@ -512,7 +512,7 @@ protected:
     
 public:
     value_type at(std::size_t);
-    container_type get();
+    container_type get_container();
     void clear();
     constexpr std::size_t size() const;
     
@@ -528,7 +528,7 @@ container<std::array<_T, _I>>::at(std::size_t __i) {
 
 template <typename _T, std::size_t _I>
 typename container<std::array<_T, _I>>::container_type
-container<std::array<_T, _I>>::get() {
+container<std::array<_T, _I>>::get_container() {
     return __c_;
 }
 

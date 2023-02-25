@@ -54,7 +54,7 @@ namespace key {
         inline bool is_running();
         
     private:
-        void __callback(const event_type&, const event_ref&) override;
+        void __callback_(const event_type&, const event_ref&) override;
     };
     
     
@@ -73,7 +73,7 @@ namespace key {
     }
     
     template <std::size_t... _Mask>
-    void __key_logger<_Mask...>::__callback(const event_type& __t, const event_ref& __e) {
+    void __key_logger<_Mask...>::__callback_(const event_type& __t, const event_ref& __e) {
 #ifdef _APPL
         CGKeyCode __kc = (CGKeyCode)CGEventGetIntegerValueField(__e, kCGKeyboardEventKeycode);
         const key::code __k = (key::code)__kc;
@@ -105,7 +105,7 @@ namespace key {
         inline bool is_running();
         
     private:
-        void __callback(const event_type&, const event_ref&) override;
+        void __callback_(const event_type&, const event_ref&) override;
     };
     
     
@@ -113,7 +113,7 @@ namespace key {
         return _Base::__s_;
     }
     
-    void __key_logger<>::__callback(const event_type& __t, const event_ref& __e) { /* Undefined */ }
+    void __key_logger<>::__callback_(const event_type& __t, const event_ref& __e) { /* Undefined */ }
     
     
     template <typename _ConT, typename _FuncT, std::size_t... _Mask>

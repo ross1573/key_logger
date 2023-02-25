@@ -4,6 +4,8 @@
 #include <thread>
 #include <iostream>
 #include <vector>
+#include <functional>
+#include <algorithm>
 
 #include "event.h"
 
@@ -19,24 +21,28 @@ struct callback_mask {
 template <typename _Key, typename _Act, std::size_t... _Mask>
 class __logger_base {
 protected:
-    typedef __logger_base<_Key, _Act, _Mask...>*                        _InsP;
+    typedef __logger_base<_Key, _Act, _Mask...>* _InsP;
 public:
 #ifdef _APPL
-    typedef CGEventType                                                 event_type;
-    typedef CGEventRef                                                  event_ref;
-    typedef CGEventField                                                event_field;
+    typedef CGEventType                     event_type;
+    typedef CGEventRef                      event_ref;
+    typedef CGEventField                    event_field;
 #elif defined _WIN
-    typedef int                                                         event_field;
-    typedef WPARAM                                                      event_type;
-    typedef LPARAM                                                      event_ref;
+    typedef int                             event_field;
+    typedef WPARAM                          event_type;
+    typedef LPARAM                          event_ref;
 #endif
-    typedef std::function<void(const event_type&, const event_ref&)>    callback;
-    typedef std::vector<callback>                                       callback_vec;
-    typedef typename callback_vec::iterator                             iterator;
+    typedef std::function<void(const event_type&, const event_ref&)> callback;
+    typedef std::size_t                     id_type;
+    typedef std::vector<id_type>            id_vec;
+    typedef std::pair<id_type, callback>    callback_id_pair;
+    typedef std::vector<callback_id_pair>   callback_vec;
     
 private:
     static _InsP __i_;
     callback_vec __v_;
+    id_type __c_;
+    id_vec __d_;
     
 protected:
     bool __s_;
@@ -55,14 +61,15 @@ protected:
     
 public:
     static _InsP get_instance();
-    iterator submit_callback(callback&);
-    void remove_callback(iterator&);
+    id_type submit_callback(const callback&);
+    void remove_callback(const id_type&);
     void set_field(event_field);
     
 private:
     void __init_();
     void __start_();
     void __stop_();
+    void __remove_callback();
     
     static const constexpr long long __create_mask_bit();
     
@@ -100,18 +107,38 @@ void __logger_base<_Key, _Act, _Mask...>::__start_() {
     __t_ = std::thread(&__logger_base::__init_, this);
     __t_.detach();
     __s_ = true;
+    __c_ = 1;
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-typename __logger_base<_Key, _Act, _Mask...>::iterator
-__logger_base<_Key, _Act, _Mask...>::submit_callback(callback& __c) {
-    __v_.push_back(__c);
-    return --__v_.end();
+typename __logger_base<_Key, _Act, _Mask...>::id_type
+__logger_base<_Key, _Act, _Mask...>::submit_callback(const callback& __c) {
+    __v_.push_back(std::make_pair(__c_, std::move(__c)));
+    return __c_++;
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __logger_base<_Key, _Act, _Mask...>::remove_callback(iterator& __i) {
-    __v_.erase(__i);
+void __logger_base<_Key, _Act, _Mask...>::remove_callback(const id_type& __i) {
+    __d_.push_back(__i);
+}
+
+template <typename _Key, typename _Act, std::size_t... _Mask>
+void __logger_base<_Key, _Act, _Mask...>::__remove_callback() {
+    if (__d_.empty()) return;
+    
+    std::sort(__d_.begin(), __d_.end());
+    auto __v_i = __v_.begin();
+    auto __d_i = __d_.begin();
+    
+    for (; __v_i != __v_.end(); __v_i++) {
+        if (__v_i->first == *__d_i) {
+            __v_.erase(__v_i);
+            if (__d_i++ == __d_.end())
+                return;
+        }
+    }
+    
+    __d_.clear();
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
@@ -172,9 +199,10 @@ void __logger_base<_Key, _Act, _Mask...>::__init_darwin() {
 template <typename _Key, typename _Act, std::size_t... _Mask>
 CGEventRef __logger_base<_Key, _Act, _Mask...>
 ::__callback_darwin(CGEventTapProxy __p, CGEventType __t, CGEventRef __e, void*) {
-    for (auto& __c : __i_->__v_) {
-        __c(__t, __e);
+    for (const callback_id_pair& __c : __i_->__v_) {
+        __c.second(__t, __e);
     }
+    __i_->__remove_callback();
     return __e;
 }
 
@@ -201,9 +229,11 @@ LRESULT CALLBACK __logger_base<_Key, _Act, _Mask...>
 
     if (__create_mask_bit() & _EVENT_MASK_BIT(__w)) {
         for (auto& __c : __i_->__v_) {
-            __c(__w, __l);
+            __c.second(__w, __l);
         }
     }
+    
+    __i_->__remove_callback();
     return CallNextHookEx(NULL, __c, __w, __l);
 }
 #endif
@@ -212,17 +242,19 @@ LRESULT CALLBACK __logger_base<_Key, _Act, _Mask...>
 template <typename _Key, typename _Act, std::size_t... _Mask>
 class __logger {
 private:
-    typedef __logger_base<_Key, _Act, _Mask...>   _Base;
+    typedef __logger_base<_Key, _Act, _Mask...> _Base;
 protected:
-    typedef typename _Base::callback                    callback;
-    typedef typename _Base::callback_vec::iterator      iterator;
-    typedef typename _Base::event_field                 event_field;
-    typedef typename _Base::event_type                  event_type;
-    typedef typename _Base::event_ref                   event_ref;
+    typedef typename _Base::callback            callback;
+    typedef typename _Base::id_type             id_type;
+    typedef typename _Base::event_field         event_field;
+    typedef typename _Base::event_type          event_type;
+    typedef typename _Base::event_ref           event_ref;
+    
+private:
+    id_type __i_;
     
 protected:
     bool __s_;
-    iterator __i_;
     
 protected:
     __logger() = default;
@@ -234,17 +266,17 @@ public:
     
 protected:
     void __set_field(event_field);
-    virtual void __callback(const event_type&, const event_ref&) = 0;
+    virtual void __callback_(const event_type&, const event_ref&) = 0;
 };
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
 void __logger<_Key, _Act, _Mask...>::start() {
-    callback __f = std::bind(&__logger<_Key, _Act, _Mask...>::__callback,
+    callback __f = std::bind(&__logger<_Key, _Act, _Mask...>::__callback_,
                              this,
                              std::placeholders::_1,
                              std::placeholders::_2);
-    __i_ = _Base::get_instance()->submit_callback(__f);
+    __i_ = _Base::get_instance()->submit_callback(std::move(__f));
     __s_ = true;
 }
 
@@ -277,12 +309,12 @@ public:
     void set_callback(callback);
     
 private:
-    void __callback(const _Key&, const _Act&) final;
+    void __callback_(const _Key&, const _Act&) final;
 };
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void logger<_Key, _Act, _Mask...>::__callback(const _Key& __k, const _Act& __a) {
+void logger<_Key, _Act, _Mask...>::__callback_(const _Key& __k, const _Act& __a) {
     __c_(__k, __a);
 }
 

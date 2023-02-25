@@ -10,7 +10,6 @@
 #   define _EVENT_MASK_BIT(x) ((__int64)1 << (x & 0x00FF))
 #   define NOMINMAX
 #   include <windows.h>
-#   undef __callback
 #endif
 
 
