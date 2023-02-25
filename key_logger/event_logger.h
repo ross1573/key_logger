@@ -5,8 +5,10 @@
 #include <iostream>
 #include <vector>
 
-#include "key_code.h"
+#include "event.h"
 
+
+namespace event {
 
 template <std::size_t... _Mask>
 struct callback_mask {
@@ -15,9 +17,9 @@ struct callback_mask {
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-class __event_logger_base {
+class __logger_base {
 protected:
-    typedef __event_logger_base<_Key, _Act, _Mask...>*                  _InsP;
+    typedef __logger_base<_Key, _Act, _Mask...>*                        _InsP;
 public:
 #ifdef _APPL
     typedef CGEventType                                                 event_type;
@@ -48,14 +50,14 @@ protected:
 #endif
     
 protected:
-    __event_logger_base() = default;
-    ~__event_logger_base();
+    __logger_base() = default;
+    ~__logger_base();
     
 public:
     static _InsP get_instance();
     iterator submit_callback(callback&);
     void remove_callback(iterator&);
-    void set_event_field(event_field);
+    void set_field(event_field);
     
 private:
     void __init_();
@@ -75,50 +77,50 @@ private:
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-typename __event_logger_base<_Key, _Act, _Mask...>::_InsP
-__event_logger_base<_Key, _Act, _Mask...>::__i_ = nullptr;
+typename __logger_base<_Key, _Act, _Mask...>::_InsP
+__logger_base<_Key, _Act, _Mask...>::__i_ = nullptr;
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-__event_logger_base<_Key, _Act, _Mask...>::~__event_logger_base<_Key, _Act, _Mask...>() {
+__logger_base<_Key, _Act, _Mask...>::~__logger_base<_Key, _Act, _Mask...>() {
     __stop_();
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-typename __event_logger_base<_Key, _Act, _Mask...>::_InsP
-__event_logger_base<_Key, _Act, _Mask...>::get_instance() {
+typename __logger_base<_Key, _Act, _Mask...>::_InsP
+__logger_base<_Key, _Act, _Mask...>::get_instance() {
     if (__i_ == nullptr) {
-        __i_ = new __event_logger_base<_Key, _Act, _Mask...>();
+        __i_ = new __logger_base<_Key, _Act, _Mask...>();
         __i_->__start_();
     }
     return __i_;
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger_base<_Key, _Act, _Mask...>::__start_() {
-    __t_ = std::thread(&__event_logger_base::__init_, this);
+void __logger_base<_Key, _Act, _Mask...>::__start_() {
+    __t_ = std::thread(&__logger_base::__init_, this);
     __t_.detach();
     __s_ = true;
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-typename __event_logger_base<_Key, _Act, _Mask...>::iterator
-__event_logger_base<_Key, _Act, _Mask...>::submit_callback(callback& __c) {
+typename __logger_base<_Key, _Act, _Mask...>::iterator
+__logger_base<_Key, _Act, _Mask...>::submit_callback(callback& __c) {
     __v_.push_back(__c);
-    return __v_.end()--;
+    return --__v_.end();
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger_base<_Key, _Act, _Mask...>::remove_callback(iterator& __i) {
+void __logger_base<_Key, _Act, _Mask...>::remove_callback(iterator& __i) {
     __v_.erase(__i);
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger_base<_Key, _Act, _Mask...>::set_event_field(event_field __f) {
+void __logger_base<_Key, _Act, _Mask...>::set_field(event_field __f) {
     __f_ = __f;
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger_base<_Key, _Act, _Mask...>::__stop_() {
+void __logger_base<_Key, _Act, _Mask...>::__stop_() {
     if (!__s_) return;
 #ifdef _APPL
     CFRunLoopStop(__l_);
@@ -127,7 +129,7 @@ void __event_logger_base<_Key, _Act, _Mask...>::__stop_() {
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger_base<_Key, _Act, _Mask...>::__init_() {
+void __logger_base<_Key, _Act, _Mask...>::__init_() {
 #ifdef _APPL
     __init_darwin();
 #elif defined _WIN
@@ -136,7 +138,7 @@ void __event_logger_base<_Key, _Act, _Mask...>::__init_() {
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-const constexpr long long __event_logger_base<_Key, _Act, _Mask...>::__create_mask_bit() {
+const constexpr long long __logger_base<_Key, _Act, _Mask...>::__create_mask_bit() {
     long long __mb = 0;
     for (auto& __e : callback_mask<_Mask...>::value) {
         __mb |= _EVENT_MASK_BIT(__e);
@@ -146,12 +148,12 @@ const constexpr long long __event_logger_base<_Key, _Act, _Mask...>::__create_ma
 
 #ifdef _APPL
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger_base<_Key, _Act, _Mask...>::__init_darwin() {
+void __logger_base<_Key, _Act, _Mask...>::__init_darwin() {
     CFMachPortRef __e = CGEventTapCreate(kCGSessionEventTap,
                                          kCGHeadInsertEventTap,
                                          kCGEventTapOptionDefault,
                                          __create_mask_bit(),
-                                         &__event_logger_base::__callback_darwin,
+                                         &__logger_base::__callback_darwin,
                                          nullptr);
     
     if (!__e) {
@@ -168,7 +170,7 @@ void __event_logger_base<_Key, _Act, _Mask...>::__init_darwin() {
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-CGEventRef __event_logger_base<_Key, _Act, _Mask...>
+CGEventRef __logger_base<_Key, _Act, _Mask...>
 ::__callback_darwin(CGEventTapProxy __p, CGEventType __t, CGEventRef __e, void*) {
     for (auto& __c : __i_->__v_) {
         __c(__t, __e);
@@ -178,8 +180,8 @@ CGEventRef __event_logger_base<_Key, _Act, _Mask...>
 
 #elif defined _WIN
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger_base<_Key, _Act, _Mask...>::__init_win32() {
-    __h_ = SetWindowsHookEx(__f_, &__event_logger_base::__callback_win32, nullptr, 0);
+void __logger_base<_Key, _Act, _Mask...>::__init_win32() {
+    __h_ = SetWindowsHookEx(__f_, &__logger_base::__callback_win32, nullptr, 0);
     if (!__h_) {
         std::cout << "Failed to create hook : " << GetLastError();
         return;
@@ -192,12 +194,12 @@ void __event_logger_base<_Key, _Act, _Mask...>::__init_win32() {
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-LRESULT CALLBACK __event_logger_base<_Key, _Act, _Mask...>
+LRESULT CALLBACK __logger_base<_Key, _Act, _Mask...>
 ::__callback_win32(int __c, WPARAM __w, LPARAM __l) {
     if (__c != HC_ACTION)
         return CallNextHookEx(NULL, __c, __w, __l);
-    
-    if (__create_mask_bit() & _EVENT_MASK_BIT(__w)) {   
+
+    if (__create_mask_bit() & _EVENT_MASK_BIT(__w)) {
         for (auto& __c : __i_->__v_) {
             __c(__w, __l);
         }
@@ -208,9 +210,9 @@ LRESULT CALLBACK __event_logger_base<_Key, _Act, _Mask...>
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-class __event_logger {
+class __logger {
 private:
-    typedef __event_logger_base<_Key, _Act, _Mask...>   _Base;
+    typedef __logger_base<_Key, _Act, _Mask...>   _Base;
 protected:
     typedef typename _Base::callback                    callback;
     typedef typename _Base::callback_vec::iterator      iterator;
@@ -223,22 +225,22 @@ protected:
     iterator __i_;
     
 protected:
-    __event_logger() = default;
-    virtual ~__event_logger() = default;
+    __logger() = default;
+    virtual ~__logger() = default;
     
 public:
     void start();
     void stop();
     
 protected:
-    void __set_event_field(event_field);
-    virtual void __event_callback(const event_type&, const event_ref&) = 0;
+    void __set_field(event_field);
+    virtual void __callback(const event_type&, const event_ref&) = 0;
 };
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger<_Key, _Act, _Mask...>::start() {
-    callback __f = std::bind(&__event_logger<_Key, _Act, _Mask...>::__event_callback,
+void __logger<_Key, _Act, _Mask...>::start() {
+    callback __f = std::bind(&__logger<_Key, _Act, _Mask...>::__callback,
                              this,
                              std::placeholders::_1,
                              std::placeholders::_2);
@@ -247,21 +249,21 @@ void __event_logger<_Key, _Act, _Mask...>::start() {
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger<_Key, _Act, _Mask...>::stop() {
+void __logger<_Key, _Act, _Mask...>::stop() {
     _Base::get_instance()->remove_callback(__i_);
     __s_ = false;
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void __event_logger<_Key, _Act, _Mask...>::__set_event_field(event_field __f) {
-    _Base::get_instance()->set_event_field(__f);
+void __logger<_Key, _Act, _Mask...>::__set_field(event_field __f) {
+    _Base::get_instance()->set_field(__f);
 }
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-class event_logger : public __event_logger<_Key, _Act, _Mask...> {
+class logger : public __logger<_Key, _Act, _Mask...> {
 private:
-    typedef __event_logger<_Key, _Act, _Mask...> _Base;
+    typedef __logger<_Key, _Act, _Mask...> _Base;
 public:
     typedef typename _Base::callback callback;
     
@@ -269,24 +271,25 @@ private:
     callback __c_;
     
 public:
-    event_logger() = default;
-    virtual ~event_logger() = default;
+    logger() = default;
+    virtual ~logger() = default;
     
     void set_callback(callback);
     
 private:
-    void __event_logger_callback(const _Key&, const _Act&) final;
+    void __callback(const _Key&, const _Act&) final;
 };
 
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void event_logger<_Key, _Act, _Mask...>::__event_logger_callback(const _Key& __k, const _Act& __a) {
+void logger<_Key, _Act, _Mask...>::__callback(const _Key& __k, const _Act& __a) {
     __c_(__k, __a);
 }
 
 template <typename _Key, typename _Act, std::size_t... _Mask>
-void event_logger<_Key, _Act, _Mask...>::set_callback(callback __c) {
+void logger<_Key, _Act, _Mask...>::set_callback(callback __c) {
     __c_ = __c;
 }
 
+}
 #endif /* __EVENT_LOGGER_H__ */

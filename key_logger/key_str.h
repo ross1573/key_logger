@@ -3,11 +3,11 @@
 
 #include <string>
 
-#include "key_code.h"
+#include "event.h"
 
 
 namespace event {
-std::string string(action __a) {
+std::string string(action::code __a) {
     switch (__a) {
         case action::key_up:        return "KEY_UP";
         case action::key_down:      return "KEY_DOWN";
@@ -16,7 +16,7 @@ std::string string(action __a) {
     return "UNKNOWN";
 }
 
-std::string string(key __k) {
+std::string string(key::code __k) {
     switch (__k) {
         case key::_0: return "0";
         case key::_1: return "1";

@@ -3,9 +3,9 @@
 
 int main() {
     bool should_end = false;
-    auto logger = key_logger<void, void(event::key), event::action::key_down>();
+    auto logger = event::key::logger<std::vector<int>, void(event::key::code), event::action::key_down, event::action::key_up>();
     
-    logger.set_callback([&should_end](event::key key) mutable {
+    logger.set_callback<0>([&should_end](event::key::code key) mutable {
         std::cout << "Key Pressed: " << event::string(key) << ", " << key << std::endl;
         if (key == event::key::q) {
             should_end = true;

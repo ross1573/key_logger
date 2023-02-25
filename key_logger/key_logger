@@ -7,407 +7,400 @@
 #include "event_callback.h"
 #include "event_container.h"
 #include "key_str.h"
-#include "key_code.h"
+#include "event.h"
 
 
-typedef std::vector<event::key>                 key_vector;
-typedef std::queue<event::key>                  key_queue;
-typedef std::deque<event::key>                  key_deque;
-typedef std::array<bool, event::code_size>      key_array;
-typedef std::bitset<event::code_size>           key_bitset;
+namespace event {
 
-typedef std::vector<event::action>              action_vector;
-typedef std::queue<event::action>               action_queue;
-typedef std::deque<event::action>               action_deque;
+namespace key {
+    typedef std::vector<key::code>              vector;
+    typedef std::queue<key::code>               queue;
+    typedef std::deque<key::code>               deque;
+    typedef std::array<bool, key::code_size>    array;
+    typedef std::bitset<key::code_size>         bitset;
+}
+
+namespace action {
+    typedef std::vector<action::code>           vector;
+    typedef std::queue<action::code>            queue;
+    typedef std::deque<action::code>            deque;
+}
 
 
-template <std::size_t... _Mask>
-class __key_logger
+namespace key {
+    template <std::size_t... _Mask>
+    class __key_logger
 #ifdef _APPL
-: public __event_logger<event::key, event::action, kCGEventFlagsChanged, _Mask...> {
+: public __logger<key::code, action::code, kCGEventFlagsChanged, _Mask...> {
 #else
-: public __event_logger<event::key, event::action, _Mask...> {
+    : public __logger<key::code, action::code, _Mask...> {
 #endif
-private:
+    private:
 #ifdef _APPL
-    typedef __event_logger<event::key, event::action, kCGEventFlagsChanged, _Mask...> _Base;
+        typedef __logger<key::code, action::code, kCGEventFlagsChanged, _Mask...> _Base;
 #else
-    typedef __event_logger<event::key, event::action, _Mask...> _Base;
+        typedef __logger<key::code, action::code, _Mask...> _Base;
 #endif
-    typedef typename _Base::event_field                         event_field;
-    typedef typename _Base::event_type                          event_type;
-    typedef typename _Base::event_ref                           event_ref;
-public:
-    typedef event::key                                          key;
-    typedef event::action                                       action;
+        typedef typename _Base::event_field     event_field;
+        typedef typename _Base::event_type      event_type;
+        typedef typename _Base::event_ref       event_ref;
+        
+    protected:
+        __key_logger();
+        virtual ~__key_logger() = default;
+        virtual void __key_callback(const key::code&, const action::code&) = 0;
+        
+    public:
+        inline bool is_running();
+        
+    private:
+        void __callback(const event_type&, const event_ref&) override;
+    };
     
-protected:
-    __key_logger();
-    virtual ~__key_logger() = default;
-    virtual void __key_event_callback(const key&, const action&) = 0;
-
-public:
-    inline bool is_running();
     
-private:
-    void __event_callback(const event_type&, const event_ref&) override;
-};
-
-
-template <std::size_t... _Mask>
-__key_logger<_Mask...>::__key_logger() {
+    template <std::size_t... _Mask>
+    __key_logger<_Mask...>::__key_logger() {
 #ifdef _APPL
-//
+        /* Undefined */
 #elif defined _WIN
-    _Base::__set_event_field(WH_KEYBOARD_LL);
+        _Base::__set_field(WH_KEYBOARD_LL);
 #endif
-}
-
-template <std::size_t... _Mask>
-bool __key_logger<_Mask...>::is_running() {
-    return _Base::__s_;
-}
-
-template <std::size_t... _Mask>
-void __key_logger<_Mask...>::__event_callback(const event_type& __t, const event_ref& __e) {
+    }
+    
+    template <std::size_t... _Mask>
+    bool __key_logger<_Mask...>::is_running() {
+        return _Base::__s_;
+    }
+    
+    template <std::size_t... _Mask>
+    void __key_logger<_Mask...>::__callback(const event_type& __t, const event_ref& __e) {
 #ifdef _APPL
-    CGKeyCode __kc = (CGKeyCode)CGEventGetIntegerValueField(__e, kCGKeyboardEventKeycode);
-    const key __k = (key)__kc;
-    const action __a = (action)__t;
-    __key_event_callback(__k, __a);
+        CGKeyCode __kc = (CGKeyCode)CGEventGetIntegerValueField(__e, kCGKeyboardEventKeycode);
+        const key::code __k = (key::code)__kc;
+        const action::code __a = (action::code)__t;
+        __key_callback(__k, __a);
 #elif defined _WIN
-    const key __k = (key)((PKBDLLHOOKSTRUCT)__e)->vkCode;
-    const action __a = (action)__t;
-    __key_event_callback(__k, __a);
+        const key::code __k = (key::code)((PKBDLLHOOKSTRUCT)__e)->vkCode;
+        const action::code __a = (action::code)__t;
+        __key_callback(__k, __a);
 #endif
-}
-    
-    
-template <>
-class __key_logger <>
-: public __event_logger<event::key, event::action> {
-private:
-    typedef __event_logger<event::key, event::action>           _Base;
-    typedef typename _Base::event_field                         event_field;
-    typedef typename _Base::event_type                          event_type;
-    typedef typename _Base::event_ref                           event_ref;
-public:
-    typedef event::key                                          key;
-    typedef event::action                                       action;
-    
-protected:
-    __key_logger() = default;
-    virtual ~__key_logger() = default;
-    virtual void __key_event_callback(const key&, const action&) = 0;
-
-public:
-    inline bool is_running();
-    
-private:
-    void __event_callback(const event_type&, const event_ref&) override;
-};
-    
-    
-bool __key_logger<>::is_running() {
-    return _Base::__s_;
-}
-    
-void __key_logger<>::__event_callback(const event_type& __t, const event_ref& __e) { /* Undefined */ }
-
-
-template <typename _ConT, typename _FuncT, std::size_t... _Mask>
-class key_logger
-: public __key_logger<_Mask...>, public event_callback<_FuncT, _Mask...>, public event_container<_ConT> {
-private:
-    typedef __key_logger<_Mask...>              _Base;
-    typedef event_callback<_FuncT, _Mask...>    _Callback;
-    typedef event_container<_ConT>              _Container;
-public:
-    typedef typename _Base::key                 key;
-    typedef typename _Base::action              action;
-    typedef typename _Callback::callback        callback;
-    typedef typename _Container::container_type container_type;
-    
-public:
-    key_logger() = default;
-    ~key_logger() = default;
-    
-protected:
-    void __key_event_callback(const key&, const action&) final;
-};
-
-
-template <typename _ConT, typename _FuncT, std::size_t... _Mask>
-void key_logger<_ConT, _FuncT, _Mask...>::__key_event_callback(const key& __k, const action& __a) {
-    _Callback::invoke_callback(__k, __a);
-    _Container::push(__k, __a);
-}
-
-
-template <typename _FuncT, std::size_t... _Mask>
-class key_logger <void, _FuncT, _Mask...>
-: public __key_logger<_Mask...>, public event_callback<_FuncT, _Mask...> {
-private:
-    typedef __key_logger<_Mask...>              _Base;
-    typedef event_callback<_FuncT, _Mask...>    _Callback;
-public:
-    typedef typename _Base::key                 key;
-    typedef typename _Base::action              action;
-    typedef typename _Callback::callback        callback;
-    
-public:
-    key_logger() = default;
-    ~key_logger() = default;
-    
-protected:
-    void __key_event_callback(const key&, const action&) final;
-};
-
-
-template <typename _FuncT, std::size_t... _Mask>
-void key_logger<void, _FuncT, _Mask...>::__key_event_callback(const key& __k, const action& __a) {
-    _Callback::invoke_callback(__k, __a);
-}
-
-
-template <typename _ConT, std::size_t... _Mask>
-class key_logger <_ConT, void, _Mask...>
-: public __key_logger<_Mask...>, public event_container<_ConT> {
-private:
-    typedef __key_logger<_Mask...>              _Base;
-    typedef event_container<_ConT>              _Container;
-public:
-    typedef typename _Base::key                 key;
-    typedef typename _Base::action              action;
-    typedef typename _Container::container_type container_type;
-    
-public:
-    key_logger() = default;
-    ~key_logger() = default;
-    
-protected:
-    void __key_event_callback(const key&, const action&) final;
-};
-
-
-template <typename _ConT, std::size_t... _Mask>
-void key_logger<_ConT, void, _Mask...>::__key_event_callback(const key& __k, const action& __a) {
-    _Container::push(__k, __a);
-}
-
-
-template <std::size_t... _Mask>
-class key_logger <void, void, _Mask...>
-: public __key_logger<_Mask...> {
-private:
-    typedef __key_logger<_Mask...>              _Base;
-public:
-    typedef typename _Base::key                 key;
-    typedef typename _Base::action              action;
-    
-public:
-    key_logger() = default;
-    ~key_logger() = default;
-    
-protected:
-    virtual void __key_event_callback(const key&, const action&) override;
-};
-
-
-template <std::size_t... _Mask>
-void key_logger<void, void, _Mask...>::__key_event_callback(const key&, const action&) { /* Undefined */ }
-
-
-template <typename _FuncT>
-class key_logger <key_array, _FuncT, event::action::key_down, event::action::key_up>
-: public __key_logger<event::action::key_down, event::action::key_up>,
-    public event_callback<_FuncT, event::action::key_down, event::action::key_up>,
-    public event_container<key_array> {
-private:
-    typedef __key_logger<event::action::key_down, event::action::key_up>            _Base;
-    typedef event_callback<_FuncT, event::action::key_down, event::action::key_up>  _Callback;
-    typedef event_container<key_array>          _Container;
-public:
-    typedef typename _Base::key                 key;
-    typedef typename _Base::action              action;
-    typedef typename _Callback::callback        callback;
-    typedef typename _Container::container_type container_type;
-    
-public:
-    key_logger() = default;
-    ~key_logger() = default;
-    
-    bool is_pressed(key);
-    
-protected:
-    void __key_event_callback(const key&, const action&) final;
-    void push(const key&, const action&) override;
-};
-
-
-template <typename _FuncT>
-bool key_logger<key_array, _FuncT, event::action::key_down, event::action::key_up>
-::is_pressed(key __k) {
-    return at(__k);
-}
-
-template <typename _FuncT>
-void key_logger<key_array, _FuncT, event::action::key_down, event::action::key_up>
-::__key_event_callback(const key& __k, const action& __a) {
-    _Callback::invoke_callback(__k, __a);
-    push(__k, __a);
-}
-
-template <typename _FuncT>
-void key_logger<key_array, _FuncT, event::action::key_down, event::action::key_up>
-::push(const key& __k, const action& __a) {
-    if (__a == action::key_down) {
-        __c_[__k] = true;
     }
-    else if (__a == action::key_up) {
-        __c_[__k] = false;
+    
+    
+    template <>
+    class __key_logger <>
+    : public __logger<key::code, action::code> {
+    private:
+        typedef __logger<key::code, action::code>       _Base;
+        typedef typename _Base::event_field event_field;
+        typedef typename _Base::event_type  event_type;
+        typedef typename _Base::event_ref   event_ref;
+        
+    protected:
+        __key_logger() = default;
+        virtual ~__key_logger() = default;
+        virtual void __key_callback(const key::code&, const action::code&) = 0;
+        
+    public:
+        inline bool is_running();
+        
+    private:
+        void __callback(const event_type&, const event_ref&) override;
+    };
+    
+    
+    bool __key_logger<>::is_running() {
+        return _Base::__s_;
     }
-}
-
-template <>
-class key_logger <key_array, void, event::action::key_down, event::action::key_up>
-: public __key_logger<event::action::key_down, event::action::key_up>,
-    public event_container<key_array> {
-private:
-    typedef __key_logger<event::action::key_down, event::action::key_up> _Base;
-    typedef event_container<key_array>          _Container;
-public:
-    typedef typename _Base::key                 key;
-    typedef typename _Base::action              action;
-    typedef typename _Container::container_type container_type;
     
-public:
-    key_logger() = default;
-    ~key_logger() = default;
+    void __key_logger<>::__callback(const event_type& __t, const event_ref& __e) { /* Undefined */ }
     
-    bool is_pressed(key);
     
-protected:
-    void __key_event_callback(const key&, const action&) final;
-    void push(const key&, const action&) override;
-};
-
-
-bool key_logger<key_array, void, event::action::key_down, event::action::key_up>
-::is_pressed(key __k) {
-    return at(__k);
-}
-
-void key_logger<key_array, void, event::action::key_down, event::action::key_up>
-::__key_event_callback(const key& __k, const action& __a) {
-    push(__k, __a);
-}
-
-void key_logger<key_array, void, event::action::key_down, event::action::key_up>
-::push(const key& __k, const action& __a) {
-    if (__a == action::key_down) {
-        __c_[__k] = true;
+    template <typename _ConT, typename _FuncT, std::size_t... _Mask>
+    class logger
+    : public __key_logger<_Mask...>, public callback<_FuncT, _Mask...>, public container<_ConT> {
+    private:
+        typedef __key_logger<_Mask...>              _Base;
+        typedef callback<_FuncT, _Mask...>          _Callback;
+        typedef container<_ConT>                    _Container;
+    public:
+        typedef typename _Callback::callback_type   callback_type;
+        typedef typename _Container::container_type container_type;
+        
+    public:
+        logger() = default;
+        ~logger() = default;
+        
+    protected:
+        void __key_callback(const key::code&, const action::code&) final;
+    };
+    
+    
+    template <typename _ConT, typename _FuncT, std::size_t... _Mask>
+    void logger<_ConT, _FuncT, _Mask...>::__key_callback(const key::code& __k, const action::code& __a) {
+        _Callback::invoke(__k, __a);
+        _Container::push(__k, __a);
     }
-    else if (__a == action::key_up) {
-        __c_[__k] = false;
+    
+    
+    template <typename _FuncT, std::size_t... _Mask>
+    class logger <void, _FuncT, _Mask...>
+    : public __key_logger<_Mask...>, public callback<_FuncT, _Mask...> {
+    private:
+        typedef __key_logger<_Mask...>              _Base;
+        typedef callback<_FuncT, _Mask...>          _Callback;
+    public:
+        typedef typename _Callback::callback_type   callback_type;
+        
+    public:
+        logger() = default;
+        ~logger() = default;
+        
+    protected:
+        void __key_callback(const key::code&, const action::code&) final;
+    };
+    
+    
+    template <typename _FuncT, std::size_t... _Mask>
+    void logger<void, _FuncT, _Mask...>::__key_callback(const key::code& __k, const action::code& __a) {
+        _Callback::invoke(__k, __a);
     }
-}
-
-
-template <typename _FuncT>
-class key_logger <key_bitset, _FuncT, event::action::key_down, event::action::key_up>
-: public __key_logger<event::action::key_down, event::action::key_up>,
-    public event_callback<_FuncT, event::action::key_down, event::action::key_up>,
-    public event_container<key_bitset> {
-private:
-    typedef __key_logger<event::action::key_down, event::action::key_up>            _Base;
-    typedef event_callback<_FuncT, event::action::key_down, event::action::key_up>  _Callback;
-    typedef event_container<key_bitset>         _Container;
-public:
-    typedef typename _Base::key                 key;
-    typedef typename _Base::action              action;
-    typedef typename _Callback::callback        callback;
-    typedef typename _Container::container_type container_type;
     
-public:
-    key_logger() = default;
-    ~key_logger() = default;
     
-    bool is_pressed(key);
+    template <typename _ConT, std::size_t... _Mask>
+    class logger <_ConT, void, _Mask...>
+    : public __key_logger<_Mask...>, public container<_ConT> {
+    private:
+        typedef __key_logger<_Mask...>              _Base;
+        typedef container<_ConT>                    _Container;
+    public:
+        typedef typename _Container::container_type container_type;
+        
+    public:
+        logger() = default;
+        ~logger() = default;
+        
+    protected:
+        void __key_callback(const key::code&, const action::code&) final;
+    };
     
-protected:
-    void __key_event_callback(const key&, const action&) final;
-    void push(const key&, const action&) override;
-};
-
-
-template <typename _FuncT>
-bool key_logger<key_bitset, _FuncT, event::action::key_down, event::action::key_up>
-::is_pressed(key __k) {
-    return at(__k);
-}
-
-template <typename _FuncT>
-void key_logger<key_bitset, _FuncT, event::action::key_down, event::action::key_up>
-::__key_event_callback(const key& __k, const action& __a) {
-    _Callback::invoke_callback(__k, __a);
-    push(__k, __a);
-}
-
-template <typename _FuncT>
-void key_logger<key_bitset, _FuncT, event::action::key_down, event::action::key_up>
-::push(const key& __k, const action& __a) {
-    if (__a == action::key_down) {
-        __c_[__k] = true;
+    
+    template <typename _ConT, std::size_t... _Mask>
+    void logger<_ConT, void, _Mask...>::__key_callback(const key::code& __k, const action::code& __a) {
+        _Container::push(__k, __a);
     }
-    else if (__a == action::key_up) {
-        __c_[__k] = false;
-    }
-}
-
-
-template <>
-class key_logger <key_bitset, void, event::action::key_down, event::action::key_up>
-: public __key_logger<event::action::key_down, event::action::key_up>,
-    public event_container<key_bitset> {
-private:
-    typedef __key_logger<event::action::key_down, event::action::key_up> _Base;
-    typedef event_container<key_bitset>         _Container;
-public:
-    typedef typename _Base::key                 key;
-    typedef typename _Base::action              action;
-    typedef typename _Container::container_type container_type;
     
-public:
-    key_logger() = default;
-    ~key_logger() = default;
     
-    bool is_pressed(key);
+    template <std::size_t... _Mask>
+    class logger <void, void, _Mask...>
+    : public __key_logger<_Mask...> {
+    private:
+        typedef __key_logger<_Mask...> _Base;
+        
+    public:
+        logger() = default;
+        ~logger() = default;
+        
+    protected:
+        virtual void __key_callback(const key::code&, const action::code&) override;
+    };
     
-protected:
-    void __key_event_callback(const key&, const action&) final;
-    void push(const key&, const action&) override;
-};
-
-
-bool key_logger<key_bitset, void, event::action::key_down, event::action::key_up>
-::is_pressed(key __k) {
-    return at(__k);
-}
-
-void key_logger<key_bitset, void, event::action::key_down, event::action::key_up>
-::__key_event_callback(const key& __k, const action& __a) {
-    push(__k, __a);
-}
-
-void key_logger<key_bitset, void, event::action::key_down, event::action::key_up>
-::push(const key& __k, const action& __a) {
-    if (__a == action::key_down) {
-        __c_[__k] = true;
+    
+    template <std::size_t... _Mask>
+    void logger<void, void, _Mask...>::__key_callback(const key::code&, const action::code&) { /* Undefined */ }
+    
+    
+    template <typename _T, std::size_t _Size, typename _FuncT>
+    class logger <std::array<_T, _Size>, _FuncT, action::code::key_down, action::code::key_up>
+    : public __key_logger<action::code::key_down, action::code::key_up>,
+    public callback<_FuncT, action::code::key_down, action::code::key_up>,
+    public container<std::array<_T, _Size>> {
+    private:
+        typedef __key_logger<action::code::key_down, action::code::key_up> _Base;
+        typedef event::callback<_FuncT, action::code::key_down, action::code::key_up> _Callback;
+        typedef container<std::array<_T, _Size>>    _Container;
+    public:
+        typedef typename _Callback::callback_type   callback_type;
+        typedef typename _Container::container_type container_type;
+        
+    public:
+        logger() = default;
+        ~logger() = default;
+        
+        bool is_pressed(key::code);
+        
+    protected:
+        void __key_callback(const key::code&, const action::code&) final;
+        void push(const key::code&, const action::code&) override;
+    };
+    
+    
+    template <typename _T, std::size_t _Size, typename _FuncT>
+    bool logger<std::array<_T, _Size>, _FuncT, action::code::key_down, action::code::key_up>
+    ::is_pressed(key::code __k) {
+        return _Container::at(__k);
     }
-    else if (__a == action::key_up) {
-        __c_[__k] = false;
+    
+    template <typename _T, std::size_t _Size, typename _FuncT>
+    void logger<std::array<_T, _Size>, _FuncT, action::code::key_down, action::code::key_up>
+    ::__key_callback(const key::code& __k, const action::code& __a) {
+        _Callback::invoke(__k, __a);
+        push(__k, __a);
     }
+    
+    template <typename _T, std::size_t _Size, typename _FuncT>
+    void logger<std::array<_T, _Size>, _FuncT, action::code::key_down, action::code::key_up>
+    ::push(const key::code& __k, const action::code& __a) {
+        if (__a == action::code::key_down) {
+            _Container::__c_[__k] = (_T)1;
+        }
+        else if (__a == action::code::key_up) {
+            _Container::__c_[__k] = (_T)0;
+        }
+    }
+    
+    
+    template <typename _T, std::size_t _Size>
+    class logger <std::array<_T, _Size>, void, action::code::key_down, action::code::key_up>
+    : public __key_logger<action::code::key_down, action::code::key_up>,
+    public container<std::array<_T, _Size>> {
+    private:
+        typedef __key_logger<action::code::key_down, action::code::key_up> _Base;
+        typedef container<std::array<_T, _Size>> _Container;
+    public:
+        typedef typename _Container::container_type container_type;
+        
+    public:
+        logger() = default;
+        ~logger() = default;
+        
+        bool is_pressed(key::code);
+        
+    protected:
+        void __key_callback(const key::code&, const action::code&) final;
+        void push(const key::code&, const action::code&) override;
+    };
+    
+    
+    template <typename _T, std::size_t _Size>
+    bool logger<std::array<_T, _Size>, void, action::code::key_down, action::code::key_up>
+    ::is_pressed(key::code __k) {
+        return _Container::at(__k);
+    }
+    
+    template <typename _T, std::size_t _Size>
+    void logger<std::array<_T, _Size>, void, action::code::key_down, action::code::key_up>
+    ::__key_callback(const key::code& __k, const action::code& __a) {
+        push(__k, __a);
+    }
+    
+    template <typename _T, std::size_t _Size>
+    void logger<std::array<_T, _Size>, void, action::code::key_down, action::code::key_up>
+    ::push(const key::code& __k, const action::code& __a) {
+        if (__a == action::code::key_down) {
+            _Container::__c_[__k] = (_T)1;
+        }
+        else if (__a == action::code::key_up) {
+            _Container::__c_[__k] = (_T)0;
+        }
+    }
+    
+    
+    template <std::size_t _Size, typename _FuncT>
+    class logger <std::bitset<_Size>, _FuncT, action::code::key_down, action::code::key_up>
+    : public __key_logger<action::code::key_down, action::code::key_up>,
+    public callback<_FuncT, action::code::key_down, action::code::key_up>,
+    public container<std::bitset<_Size>> {
+    private:
+        typedef __key_logger<action::code::key_down, action::code::key_up> _Base;
+        typedef event::callback<_FuncT, action::code::key_down, action::code::key_up> _Callback;
+        typedef container<std::bitset<_Size>>       _Container;
+    public:
+        typedef typename _Callback::callback_type   callback_type;
+        typedef typename _Container::container_type container_type;
+        
+    public:
+        logger() = default;
+        ~logger() = default;
+        
+        bool is_pressed(key::code);
+        
+    protected:
+        void __key_callback(const key::code&, const action::code&) final;
+        void push(const key::code&, const action::code&) override;
+    };
+    
+    
+    template <std::size_t _Size, typename _FuncT>
+    bool logger<std::bitset<_Size>, _FuncT, action::code::key_down, action::code::key_up>
+    ::is_pressed(key::code __k) {
+        return _Container::at(__k);
+    }
+    
+    template <std::size_t _Size, typename _FuncT>
+    void logger<std::bitset<_Size>, _FuncT, action::code::key_down, action::code::key_up>
+    ::__key_callback(const key::code& __k, const action::code& __a) {
+        _Callback::invoke(__k, __a);
+        push(__k, __a);
+    }
+    
+    template <std::size_t _Size, typename _FuncT>
+    void logger<std::bitset<_Size>, _FuncT, action::code::key_down, action::code::key_up>
+    ::push(const key::code& __k, const action::code& __a) {
+        if (__a == action::code::key_down) {
+            _Container::__c_[__k] = true;
+        }
+        else if (__a == action::code::key_up) {
+            _Container::__c_[__k] = false;
+        }
+    }
+    
+    
+    template <std::size_t _Size>
+    class logger <std::bitset<_Size>, void, action::code::key_down, action::code::key_up>
+    : public __key_logger<action::code::key_down, action::code::key_up>,
+    public container<std::bitset<_Size>> {
+    private:
+        typedef __key_logger<action::code::key_down, action::code::key_up> _Base;
+        typedef container<std::bitset<_Size>>       _Container;
+    public:
+        typedef typename _Container::container_type container_type;
+        
+    public:
+        logger() = default;
+        ~logger() = default;
+        
+        bool is_pressed(key::code);
+        
+    protected:
+        void __key_callback(const key::code&, const action::code&) final;
+        void push(const key::code&, const action::code&) override;
+    };
+    
+    
+    template <std::size_t _Size>
+    bool logger<std::bitset<_Size>, void, action::code::key_down, action::code::key_up>
+    ::is_pressed(key::code __k) {
+        return _Container::at(__k);
+    }
+    
+    template <std::size_t _Size>
+    void logger<std::bitset<_Size>, void, action::code::key_down, action::code::key_up>
+    ::__key_callback(const key::code& __k, const action::code& __a) {
+        push(__k, __a);
+    }
+    
+    template <std::size_t _Size>
+    void logger<std::bitset<_Size>, void, action::code::key_down, action::code::key_up>
+    ::push(const key::code& __k, const action::code& __a) {
+        if (__a == action::code::key_down) {
+            _Container::__c_[__k] = true;
+        }
+        else if (__a == action::code::key_up) {
+            _Container::__c_[__k] = false;
+        }
+    }
+    
 }
-
+}
 #endif /* __KEY_LOGGER_H__ */

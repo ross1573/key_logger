@@ -9,114 +9,124 @@
 #include <array>
 #include <string>
 
-#include "key_code.h"
+#include "event.h"
 #include "key_str.h"
 
 
+namespace event {
+
 template <typename _T>
 _T
-convert_event(const event::key&, const event::action&) {}
+convert(const key::code& __k, const action::code&) {
+    return (_T)__k;
+}
 
 template <>
-event::key
-convert_event<event::key>(const event::key& __k, const event::action&) {
+std::nullptr_t
+convert<std::nullptr_t>(const key::code&, const action::code&) {
+    return nullptr;
+}
+
+template <>
+key::code
+convert<key::code>(const key::code& __k, const action::code&) {
     return __k;
 }
 
 template <>
-event::action
-convert_event<event::action>(const event::key&, const event::action& __a) {
+action::code
+convert<action::code>(const key::code&, const action::code& __a) {
     return __a;
 }
 
 template <>
-std::pair<event::key, event::action>
-convert_event<std::pair<event::key, event::action>>(const event::key& __k, const event::action& __a) {
+std::pair<key::code, action::code>
+convert<std::pair<key::code, action::code>>(const key::code& __k, const action::code& __a) {
     return std::make_pair(__k, __a);
 }
 
 template <>
-std::pair<event::action, event::key>
-convert_event<std::pair<event::action, event::key>>(const event::key& __k, const event::action& __a) {
+std::pair<action::code, key::code>
+convert<std::pair<action::code, key::code>>(const key::code& __k, const action::code& __a) {
     return std::make_pair(__a, __k);
 }
 
 
 template <typename _T>
-class __event_container {
+class __container {
 public:
     typedef _T value_type;
     
 protected:
-    __event_container() = default;
-    ~__event_container() = default;
-    __event_container(__event_container const &) = delete;
+    __container() = default;
+    ~__container() = default;
+    __container(__container const &) = delete;
     
-    void push(const event::key&, const event::action&);
+    virtual void push(const key::code&, const action::code&);
     virtual void __push_(value_type&&) = 0;
 };
 
 
 template <typename _T>
 void
-__event_container<_T>::push(const event::key& __k, const event::action& __a) {
-    __push_(convert_event<_T>(__k, __a));
+__container<_T>::push(const key::code& __k, const action::code& __a) {
+    __push_(convert<_T>(__k, __a));
 }
 
 
 template <>
-class __event_container <void> {
+class __container <void> {
 public:
     typedef void value_type;
     
 protected:
-    __event_container() = default;
-    ~__event_container() = default;
-    __event_container(__event_container const &) = delete;
+    __container() = default;
+    ~__container() = default;
+    __container(__container const &) = delete;
 };
 
 
 template <>
-class __event_container <bool> {
+class __container <bool> {
 public:
     typedef bool value_type;
     
 protected:
-    __event_container() = default;
-    ~__event_container() = default;
-    __event_container(__event_container const &) = delete;
+    __container() = default;
+    ~__container() = default;
+    __container(__container const &) = delete;
     
-    virtual void push(const event::key&, const event::action&) = 0;
+    virtual void push(const key::code&, const action::code&) = 0;
 };
 
 
 template <typename _ConT>
-class event_container {
+class container {
 protected:
-    event_container() = delete;
-    ~event_container() = delete;
+    container() = delete;
+    ~container() = delete;
 };
 
 
 template <>
-class event_container<void> : public __event_container<void> {
+class container<void> : public __container<void> {
 protected:
-    typedef __event_container<std::nullptr_t> _Base;
+    typedef __container<std::nullptr_t> _Base;
 public:
     typedef typename _Base::value_type  value_type;
     typedef void                        container_type;
     
 protected:
-    event_container() = default;
-    virtual ~event_container() = default;
+    container() = default;
+    virtual ~container() = default;
 };
 
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-class event_container<std::queue<_T>>
-: public __event_container<_T> {
+template <typename _T>
+class container<std::queue<_T>>
+: public __container<_T> {
 protected:
-    typedef __event_container<_T>       _Base;
+    typedef __container<_T>             _Base;
 public:
     typedef typename _Base::value_type  value_type;
     typedef std::queue<value_type>      container_type;
@@ -126,12 +136,12 @@ protected:
     container_type __c_;
     
 protected:
-    event_container() = default;
-    virtual ~event_container() = default;
+    container() = default;
+    virtual ~container() = default;
     
 public:
     value_type pop();
-    container_type& container();
+    container_type& get();
     split_container get_all();
     
     bool empty();
@@ -143,35 +153,35 @@ protected:
 };
 
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::queue<_T>>::value_type
-event_container<std::queue<_T>>::pop() {
+template <typename _T>
+typename container<std::queue<_T>>::value_type
+container<std::queue<_T>>::pop() {
     auto __tmp = __c_.front();
     __c_.pop();
     return __tmp;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::queue<_T>>::container_type&
-event_container<std::queue<_T>>::container() {
+template <typename _T>
+typename container<std::queue<_T>>::container_type&
+container<std::queue<_T>>::get() {
     return __c_;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 std::size_t
-event_container<std::queue<_T>>::size() {
+container<std::queue<_T>>::size() {
     return __c_.size();
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 bool
-event_container<std::queue<_T>>::empty() {
+container<std::queue<_T>>::empty() {
     return __c_.empty();
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::queue<_T>>::split_container
-event_container<std::queue<_T>>::get_all() {
+template <typename _T>
+typename container<std::queue<_T>>::split_container
+container<std::queue<_T>>::get_all() {
     std::vector<value_type> __v(__c_.size());
     while (!__c_.empty()) {
         __v.emplace_back(__c_.front());
@@ -180,24 +190,24 @@ event_container<std::queue<_T>>::get_all() {
     return __v;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 void
-event_container<std::queue<_T>>::clear() {
+container<std::queue<_T>>::clear() {
     __c_ = container_type();
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 void
-event_container<std::queue<_T>>::__push_(value_type&& __v) {
+container<std::queue<_T>>::__push_(value_type&& __v) {
     __c_.push(__v);
 }
 
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-class event_container<std::deque<_T>>
-: public __event_container<_T> {
+template <typename _T>
+class container<std::deque<_T>>
+: public __container<_T> {
 protected:
-    typedef __event_container<_T>       _Base;
+    typedef __container<_T>             _Base;
 public:
     typedef typename _Base::value_type  value_type;
     typedef std::deque<value_type>      container_type;
@@ -207,14 +217,14 @@ protected:
     container_type __c_;
     
 protected:
-    event_container() = default;
-    virtual ~event_container() = default;
+    container() = default;
+    virtual ~container() = default;
     
 public:
     value_type pop();
     value_type pop_back();
     value_type at(std::size_t);
-    container_type& container();
+    container_type& get();
     split_container get_all();
     std::string get_string();
     
@@ -230,61 +240,61 @@ protected:
 };
 
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::deque<_T>>::value_type
-event_container<std::deque<_T>>::pop() {
+template <typename _T>
+typename container<std::deque<_T>>::value_type
+container<std::deque<_T>>::pop() {
     auto __tmp = __c_.front();
     __c_.pop_front();
     return __tmp;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::deque<_T>>::value_type
-event_container<std::deque<_T>>::pop_back() {
+template <typename _T>
+typename container<std::deque<_T>>::value_type
+container<std::deque<_T>>::pop_back() {
     auto __tmp = __c_.back();
     __c_.pop_back();
     return __tmp;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::deque<_T>>::value_type
-event_container<std::deque<_T>>::at(std::size_t __i) {
+template <typename _T>
+typename container<std::deque<_T>>::value_type
+container<std::deque<_T>>::at(std::size_t __i) {
     return __c_.at(__i);
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 void
-event_container<std::deque<_T>>::erase(std::size_t __i) {
+container<std::deque<_T>>::erase(std::size_t __i) {
     __c_.erase(__c_.begin() + __i);
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::deque<_T>>::container_type&
-event_container<std::deque<_T>>::container() {
+template <typename _T>
+typename container<std::deque<_T>>::container_type&
+container<std::deque<_T>>::get() {
     return __c_;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 bool
-event_container<std::deque<_T>>::empty() {
+container<std::deque<_T>>::empty() {
     return __c_.empty();
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 std::size_t
-event_container<std::deque<_T>>::size() {
+container<std::deque<_T>>::size() {
     return __c_.size();
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::deque<_T>>::split_container
-event_container<std::deque<_T>>::get_all() {
+template <typename _T>
+typename container<std::deque<_T>>::split_container
+container<std::deque<_T>>::get_all() {
     return split_container {__c_.begin(), __c_.end()};
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 std::string
-event_container<std::deque<_T>>::get_string() {
+container<std::deque<_T>>::get_string() {
     std::string __s;
     for (auto& ele : __c_) {
         __s.append(event::string(ele));
@@ -292,30 +302,30 @@ event_container<std::deque<_T>>::get_string() {
     return __s;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 void
-event_container<std::deque<_T>>::clear() {
+container<std::deque<_T>>::clear() {
     __c_.resize(0);
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-const typename event_container<std::deque<_T>>::value_type
-event_container<std::deque<_T>>::operator[](std::size_t __i) const {
+template <typename _T>
+const typename container<std::deque<_T>>::value_type
+container<std::deque<_T>>::operator[](std::size_t __i) const {
     return at(__i);
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 void
-event_container<std::deque<_T>>::__push_(value_type&& __v) {
+container<std::deque<_T>>::__push_(value_type&& __v) {
     __c_.push_back(__v);
 }
 
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-class event_container<std::vector<_T>>
-: public __event_container<_T> {
+template <typename _T>
+class container<std::vector<_T>>
+: public __container<_T> {
 protected:
-    typedef __event_container<_T>       _Base;
+    typedef __container<_T>             _Base;
 public:
     typedef typename _Base::value_type  value_type;
     typedef std::vector<value_type>     container_type;
@@ -325,13 +335,13 @@ protected:
     container_type __c_;
     
 protected:
-    event_container() = default;
-    virtual ~event_container() = default;
+    container() = default;
+    virtual ~container() = default;
     
 public:
     split_container pop(std::size_t);
     value_type at(std::size_t);
-    container_type& container();
+    container_type& get();
     split_container get_all();
     std::string get_string();
     split_container at(std::size_t, std::size_t);
@@ -348,35 +358,35 @@ protected:
 };
 
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::vector<_T>>::split_container
-event_container<std::vector<_T>>::pop(std::size_t __i) {
+template <typename _T>
+typename container<std::vector<_T>>::split_container
+container<std::vector<_T>>::pop(std::size_t __i) {
     split_container __v {__c_.begin(), __c_.begin() + __i};
     __v.erase(__c_.begin(), __c_.begin() + __i);
     return __v;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::vector<_T>>::value_type
-event_container<std::vector<_T>>::at(std::size_t __i) {
+template <typename _T>
+typename container<std::vector<_T>>::value_type
+container<std::vector<_T>>::at(std::size_t __i) {
     return __c_.at(__i);
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::vector<_T>>::container_type&
-event_container<std::vector<_T>>::container() {
+template <typename _T>
+typename container<std::vector<_T>>::container_type&
+container<std::vector<_T>>::get() {
     return __c_;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::vector<_T>>::split_container
-event_container<std::vector<_T>>::get_all() {
+template <typename _T>
+typename container<std::vector<_T>>::split_container
+container<std::vector<_T>>::get_all() {
     return split_container {__c_.begin(), __c_.end()};
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 std::string
-event_container<std::vector<_T>>::get_string() {
+container<std::vector<_T>>::get_string() {
     std::string __s;
     for (auto& ele : __c_) {
         __s.append(event::string(ele));
@@ -384,67 +394,68 @@ event_container<std::vector<_T>>::get_string() {
     return __s;
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-typename event_container<std::vector<_T>>::split_container
-event_container<std::vector<_T>>::at(std::size_t __1, std::size_t __2) {
+template <typename _T>
+typename container<std::vector<_T>>::split_container
+container<std::vector<_T>>::at(std::size_t __1, std::size_t __2) {
     return split_container {__c_.begin() + __1, __c_.begin() + __2};
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 bool
-event_container<std::vector<_T>>::empty() {
+container<std::vector<_T>>::empty() {
     return __c_.empty();
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 void
-event_container<std::vector<_T>>::clear() {
+container<std::vector<_T>>::clear() {
     __c_.clear();
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 std::size_t
-event_container<std::vector<_T>>::size() {
+container<std::vector<_T>>::size() {
     __c_.size();
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 void
-event_container<std::vector<_T>>::erase(std::size_t __1, std::size_t __2) {
+container<std::vector<_T>>::erase(std::size_t __1, std::size_t __2) {
     __c_.erase(__c_.begin() + __1, __c_.begin() + __2);
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
-const typename event_container<std::vector<_T>>::value_type
-event_container<std::vector<_T>>::operator[](std::size_t __i) const {
+template <typename _T>
+const typename container<std::vector<_T>>::value_type
+container<std::vector<_T>>::operator[](std::size_t __i) const {
     return at(__i);
 }
 
-template <typename _T> _REQUIRES_EVENT_TYPE(_T)
+template <typename _T>
 void
-event_container<std::vector<_T>>::__push_(value_type&& __v) {
+container<std::vector<_T>>::__push_(value_type&& __v) {
     __c_.push_back(__v);
 }
 
 
-template <>
-class event_container<std::bitset<event::code_size>>
-: public __event_container<bool> {
+template <std::size_t _Size>
+class container<std::bitset<_Size>>
+: public __container<bool> {
 protected:
-    typedef __event_container<bool>         _Base;
+    typedef __container<bool>               _Base;
 public:
     typedef typename _Base::value_type      value_type;
-    typedef std::bitset<event::code_size>   container_type;
+    typedef std::bitset<event::key::code_size> container_type;
     
 protected:
     container_type __c_;
     
 protected:
-    event_container() = default;
-    virtual ~event_container() = default;
+    container() = default;
+    virtual ~container() = default;
     
 public:
     value_type at(std::size_t);
+    container_type get();
     void clear();
     constexpr std::size_t size() const;
     
@@ -452,32 +463,42 @@ public:
 };
 
 
-typename event_container<std::bitset<event::code_size>>::value_type
-event_container<std::bitset<event::code_size>>::at(std::size_t __i) {
+template <std::size_t _Size>
+typename container<std::bitset<_Size>>::value_type
+container<std::bitset<_Size>>::at(std::size_t __i) {
     return __c_[__i];
 }
 
+template <std::size_t _Size>
+typename container<std::bitset<_Size>>::container_type
+container<std::bitset<_Size>>::get() {
+    return __c_;
+}
+
+template <std::size_t _Size>
 void
-event_container<std::bitset<event::code_size>>::clear() {
+container<std::bitset<_Size>>::clear() {
     __c_.reset();
 }
 
+template <std::size_t _Size>
 constexpr std::size_t
-event_container<std::bitset<event::code_size>>::size() const {
-    return event::code_size;
+container<std::bitset<_Size>>::size() const {
+    return _Size;
 }
 
-const typename event_container<std::bitset<event::code_size>>::value_type
-event_container<std::bitset<event::code_size>>::operator[](std::size_t __i) const {
+template <std::size_t _Size>
+const typename container<std::bitset<_Size>>::value_type
+container<std::bitset<_Size>>::operator[](std::size_t __i) const {
     return __c_[__i];
 }
 
 
-template <std::size_t _I>
-class event_container<std::array<bool, _I>>
-: public __event_container<bool> {
+template <typename _T, std::size_t _I>
+class container<std::array<_T, _I>>
+: public __container<_T> {
 protected:
-    typedef __event_container<bool>     _Base;
+    typedef __container<_T>             _Base;
 public:
     typedef typename _Base::value_type  value_type;
     typedef std::array<value_type, _I>  container_type;
@@ -486,11 +507,12 @@ protected:
     container_type __c_;
     
 protected:
-    event_container() = default;
-    virtual ~event_container() = default;
+    container() = default;
+    virtual ~container() = default;
     
 public:
     value_type at(std::size_t);
+    container_type get();
     void clear();
     constexpr std::size_t size() const;
     
@@ -498,28 +520,35 @@ public:
 };
 
 
-template <std::size_t _I>
-typename event_container<std::array<bool, _I>>::value_type
-event_container<std::array<bool, _I>>::at(std::size_t __i) {
+template <typename _T, std::size_t _I>
+typename container<std::array<_T, _I>>::value_type
+container<std::array<_T, _I>>::at(std::size_t __i) {
     return __c_.at(__i);
 }
 
-template <std::size_t _I>
+template <typename _T, std::size_t _I>
+typename container<std::array<_T, _I>>::container_type
+container<std::array<_T, _I>>::get() {
+    return __c_;
+}
+
+template <typename _T, std::size_t _I>
 void
-event_container<std::array<bool, _I>>::clear() {
-    __c_.fill(false);
+container<std::array<_T, _I>>::clear() {
+    __c_.fill((_T)0);
 }
 
-template <std::size_t _I>
+template <typename _T, std::size_t _I>
 constexpr std::size_t
-event_container<std::array<bool, _I>>::size() const {
-    return __c_.size();
+container<std::array<_T, _I>>::size() const {
+    return _I;
 }
 
-template <std::size_t _I>
-const typename event_container<std::array<bool, _I>>::value_type
-event_container<std::array<bool, _I>>::operator[](std::size_t __i) const {
+template <typename _T, std::size_t _I>
+const typename container<std::array<_T, _I>>::value_type
+container<std::array<_T, _I>>::operator[](std::size_t __i) const {
     return __c_.at(__i);
 }
 
+}
 #endif /* __EVENT_CONTAINER_H__ */
