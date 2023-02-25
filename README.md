@@ -1,5 +1,5 @@
 # KeyLogger
-Multiple purpose key logger for Windows and macOS writhen in C++  
+Multipurpose key logger for Windows and macOS writhen in C++  
 Requires C++ 20, tested on apple clang 14.0.0 and VC++ 14.30  
 Performance is about 0~2 mircoseconds(on full optimization -Ofast/-O2)
 ~~~
