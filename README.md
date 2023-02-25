@@ -1,5 +1,7 @@
 # KeyLogger
-Simple key logger for Windows and macOS writhen in C++
+Multiple purpose key logger for Windows and macOS writhen in C++  
+Requires C++ 20, tested on apple clang 14.0.0 and VC++ 14.30  
+Performance is about 0~2 mircoseconds(on full optimization -Ofast/-O2)
 ~~~
 On macOS, please add 'ApplicationServices.framework' to the project
 ~~~
@@ -7,46 +9,50 @@ On macOS, please add 'ApplicationServices.framework' to the project
 ## Usage  
 1. create an object of class key_logger
 ```c++
-auto example_logger = key_logger<container_type, callback_type, event_mask>();
+auto example_logger = event::key::logger<container_type, callback_type, event_mask...>();
 ```
 2. set callback function  
 ```c++
-example_logger.set_callback([&should_end](event::key key) mutable {
-    std::cout << "Key Pressed: " << event::string(key) << ", " << key << std::endl;
+example_logger.set_callback([=](event::key::code key) mutable {
+    std::cout << "Key Pressed: " << event::string(key) << std::endl;
 });
 ```
 3. start
  ```c++
 example_logger.start();
 ```
+4. cleanup
+ ```c++
+example_logger.stop();
+```
 -----
 ## Supported Features  
 ### Container Types
 - Stored Containers
   - vector
-    ~~~
-    key_vector = std::vector<event::key>
-    action_vector = std::vector<event::action>
-    ~~~
+    ```c++
+    key_vector = std::vector<event::key::code>
+    action_vector = std::vector<event::action::code>
+    ```
   - queue
-    ~~~
-    key_queue = std::queue<event::key>
-    action_queue = std::queue<event::queue>
-    ~~~
+    ```c++
+    key_queue = std::queue<event::key::code>
+    action_queue = std::queue<event::action::code>
+    ```
   - deque
-    ~~~
-    key_deque = std::deque<event::key>
-    action_deque = std::deque<event::action>
-    ~~~
+    ```c++
+    key_deque = std::deque<event::key::code>
+    action_deque = std::deque<event::action::code>
+    ```
 - Table Containers
   - array
-    ~~~
-    key_array = std::array<bool, event::code_size>
-    ~~~
+    ```c++
+    key_array = std::array<bool, event::key::code_size>
+    ```
   - bitset
-    ~~~
-    key_bitset = std::bitset<event::code_size>
-    ~~~
+    ```c++
+    key_bitset = std::bitset<event::key::code_size>
+    ```
   
 ### Callback Function Types
 - void
@@ -54,24 +60,24 @@ example_logger.start();
   cannot register callback function, non callback function will be invoked
   ~~~
 - single parameter
-  ~~~
-  void(event::key)
-  void(event::action)
-  ~~~
+  ```c++
+  void(event::key::code)
+  void(event::action::code)
+  ```
 - two parameter
-  ~~~
-  void(event::key, event::action)
-  ~~~
+  ```c++
+  void(event::key::code, event::action::code)
+  ```
   
 ### Event Masks
 - Key press
-  ~~~
+  ```c++
   event::action::key_down
-  ~~~
+  ```
 - key release
-  ~~~
+  ```c++
   event::action::key_up
-  ~~~
+  ```
 
 -----
 ## Windows
