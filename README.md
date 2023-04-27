@@ -1,73 +1,61 @@
 # KeyLogger
 Multipurpose key logger for Windows and macOS writhen in C++  
-Requires C++ 20, tested on apple clang 14.0.0 and VC++ 14.30  
-Performance is about 0~2 mircoseconds(on full optimization -Ofast/-O2)
+Requires C++ 20, tested on apple clang 14 and VC++ 14  
+Overhead is about 1~2 mircoseconds  
 ~~~
 On macOS, please add 'ApplicationServices.framework' to the project
 ~~~
 -----
 ## Usage  
-1. create an object of class key_logger
+1. create an logger object
 ```c++
-auto example_logger = event::key::logger<container_type, callback_type, event_mask...>();
-```
-2. set callback function  
+auto example_logger = event::keyboard::logger<callback, container, type, event_mask...>();
+```  
+2. set callback function
 ```c++
-example_logger.set_callback([=](event::key::code key) mutable {
-    std::cout << "Key Pressed: " << event::string(key) << std::endl;
-});
-```
+example_logger.set_callback(callback_function);
+```  
 3. start
  ```c++
 example_logger.start();
-```
+```  
 4. cleanup
  ```c++
 example_logger.stop();
-```
+```  
 -----
 ## Supported Features  
-### Container Types
-- Stored Containers
-  - vector
-    ```c++
-    key_vector = std::vector<event::key::code>
-    action_vector = std::vector<event::action::code>
-    ```
-  - queue
-    ```c++
-    key_queue = std::queue<event::key::code>
-    action_queue = std::queue<event::action::code>
-    ```
-  - deque
-    ```c++
-    key_deque = std::deque<event::key::code>
-    action_deque = std::deque<event::action::code>
-    ```
-- Table Containers
-  - array
-    ```c++
-    key_array = std::array<bool, event::key::code_size>
-    ```
-  - bitset
-    ```c++
-    key_bitset = std::bitset<event::key::code_size>
-    ```
+### Container Types  
+- Null container
+  ```c++
+  event::null_container = event::null_template_type
+  ```  
+- Stored Containers  
+  ```c++
+  event::vector -> std::vector  
+  event::queue  -> std::queue  
+  event::deque  -> std::deque  
+  ```  
+- Table Containers  
+  ```c++
+  event::array  -> std::array
+  event::bitset -> std::bitset
+  ```    
   
-### Callback Function Types
-- void
-  ~~~
-  cannot register callback function, non callback function will be invoked
-  ~~~
-- single parameter
+### Callback Function Types  
+- Null callback
   ```c++
-  void(event::key::code)
-  void(event::action::code)
-  ```
-- two parameter
+  event::null_container = event::null_type
+  ```  
+- Others
   ```c++
-  void(event::key::code, event::action::code)
-  ```
+  type                          -> std::function<void(type)>
+  return(param...)              -> std::function<return(parameter...)>
+  std::function<type>           -> std::function<type>
+  return(*)(param...)           -> function pointer
+  return(class::*)(param...)    -> member function pointer
+  lambda                        -> lambda
+  ```  
   
 ### Event Masks
 - Key press
