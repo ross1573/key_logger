@@ -1,10 +1,18 @@
-#ifndef __KEYCODE_H__
-#define __KEYCODE_H__
+#ifndef _EVENT__H
+#define _EVENT__H
 
 #ifdef  __APPLE__
 #   define _APPL
 #   define _EVENT_MASK_BIT(x) CGEventMaskBit(x)
 #   include <ApplicationServices/ApplicationServices.h>
+
+#   ifndef _EVENT_CREATE_ATTEMPT
+#       define _EVENT_CREATE_ATTEMPT 30
+#   endif
+#   ifndef _EVENT_CREATE_STEP
+#       define _EVENT_CREATE_STEP 1000
+#   endif
+
 #elif _WIN32
 #   define _WIN
 #   define _EVENT_MASK_BIT(x) ((__int64)1 << (x & 0x00FF))
@@ -18,9 +26,10 @@ namespace event {
 namespace action {
 enum code {
     key_down        = kCGEventKeyDown,
-    key_up          = kCGEventKeyUp
+    key_up          = kCGEventKeyUp,
+    key_system      = kCGEventFlagsChanged
 };
-}
+} /* action */
 
 namespace key {
 enum code {
@@ -111,20 +120,23 @@ enum code {
     down                    = 125,
     up                      = 126,
     function                = 179,
-    null                    =  -1
+    null                    =  -1,
+    code_size               = 255
 };
 
-static constexpr const int& code_size = 256;
-}}
+} /* key */
+/* _APPL */
+
 
 #elif defined _WIN
 namespace event {
 namespace action {
 enum code {
     key_down        = WM_KEYDOWN,
-    key_up          = WM_KEYUP
+    key_up          = WM_KEYUP,
+    key_system      = WM_SYSKEYDOWN
 };
-}
+} /* action */
 
 namespace key {
 enum code {
@@ -191,39 +203,12 @@ enum code {
     backslash               = 220,
     right_square_bracket    = 221,
     quote                   = 222,
-    null                    =  -1
+    null                    =  -1,
+    code_size               = 255
 };
 
-static constexpr const int& code_size = 256;
-}}
-#endif
+} /* key */
+#endif /* _WIN32 */
 
-
-#include <type_traits>
-#include <utility>
-
-#define __IS_EVENT_TYPE(x) \
-    std::is_same_v<x, event::key::code> || \
-    std::is_same_v<x, event::action::code>
-
-template <typename _T> struct __is_event_type_pair : std::false_type {};
-template <typename _1, typename _2>
-    requires __IS_EVENT_TYPE(_1) && __IS_EVENT_TYPE(_2)
-struct __is_event_type_pair<std::pair<_1, _2>> : std::true_type {};
-
-typedef std::pair<event::key::code, event::action::code> event_pair;
-
-#define __IS_EVENT_TYPE_PAIR(x) __is_event_type_pair<x>::value
-#define __IS_EVENT_PAIR(x) std::is_same_v<x, event_pair>
-
-#define _IS_EVENT_TYPE(x) \
-    __IS_EVENT_TYPE(x) || \
-    __IS_EVENT_TYPE_PAIR(x) || \
-    __IS_EVENT_PAIR(x)
-
-#define _IS_EVENT_PAIR(x) \
-    __IS_EVENT_PAIR(x)
-
-#define _REQUIRES_EVENT_TYPE(x) requires _IS_EVENT_TYPE(x)
-
-#endif /* __KEYCODE_H__ */
+} /* event */
+#endif /* _EVENT__H */
