@@ -8,17 +8,29 @@ void function_ptr_example(event::key::code key, event::action::code action) {
 
 
 int main() {
-    /* Function pointer example */
+    /*
+        [ Function pointer example ]
+        - callback type: function pointer(void(*))
+        - container type: null_container
+        - parameter type: default(key_action_type)
+        - mask type: default(key_down, key_up, key_system)
+     */
     event::keyboard::logger<
         decltype(&function_ptr_example),
         event::null_container
     > function_logger;
-    
+        
     function_logger.set_callback(&function_ptr_example);
     function_logger.start();
     
     
-    /* Member function example */
+    /*
+        [ Member function example ]
+        - callback type: member function pointer(void(class::*))
+        - container type: null_container
+        - parameter type: action_type
+        - mask type: default(key_down, key_up, key_system)
+     */
     struct mem_fn_example {
         std::string str = "This is from member function, action: ";
         
@@ -39,7 +51,13 @@ int main() {
     mem_fn_logger.start();
     
     
-    /* Lambda function example */
+    /*
+        [ Lambda function example ]
+        - callback type: lambda function
+        - container type: null_container
+        - parameter type: key_type
+        - mask type: key_up
+     */
     std::string str("This is from lambda function, key: ");
     auto lambda_func = [&str](event::key::code key) -> void {
         std::cout << str << key << std::endl;
@@ -56,7 +74,13 @@ int main() {
     lambda_logger.start();
     
     
-    /* std::function example */
+    /*
+        [ std function example ]
+        - callback type: std::function
+        - container type: deque(std::deque<key_type>)
+        - parameter type: key_type
+        - mask type: key_down
+     */
     event::keyboard::logger<
         event::key::code,
         event::deque,
@@ -70,7 +94,15 @@ int main() {
     std_function_logger.start();
     
     
-    /* Do other stuff... */
+    /*
+        [ Do other stuff... ]
+        - Logger runs on other thread
+        - It does not block other threads
+     
+        - Other threads can be blocked only on following function calls
+          |- start() -> this function inserts the callback function to __logger_base
+          |- stop()  -> this function removes the callback function from __logger_base
+     */
     while (function_logger.is_running()) {
         if (not std_function_logger.empty()) {
             auto input = std_function_logger.pop_back();
@@ -83,7 +115,12 @@ int main() {
     }
     
     
-    /* Clean up */
+    /*
+        [ Clean up ]
+        - logger(__logger_base) is stopped when there is no callback to invoke
+        - logger(__logger_base) restarts when callback is needed
+        - logger(__logger_base) is destroyed on program exit(could not be destroyed during program run)
+     */
     function_logger.stop();
     mem_fn_logger.stop();
     lambda_logger.stop();

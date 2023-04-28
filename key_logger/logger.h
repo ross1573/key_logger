@@ -342,7 +342,7 @@ protected:
     __logger_common(_This&&) = delete;
     _This& operator=(const _This&) = delete;
     _This& operator=(_This&&) = delete;
-    virtual ~__logger_common() = default;
+    virtual ~__logger_common();
     
 public:
     void start();
@@ -355,6 +355,11 @@ protected:
     virtual void __callback_(const event_type&, const event_ref&) = 0;
 };
 
+
+template <std::size_t... _Mask>
+__logger_common<_Mask...>::~__logger_common() {
+    stop();
+}
 
 template <std::size_t... _Mask>
 void __logger_common<_Mask...>::start() {
