@@ -1,7 +1,7 @@
 # KeyLogger
 Multipurpose key logger for Windows and macOS writhen in C++  
 Requires C++ 20, tested on apple clang 14 and VC++ 14  
-Overhead is about 1~2 mircoseconds  
+Overhead is about 1~2 mircoseconds(on first callback invocation)  
 ~~~
 On macOS, please add 'ApplicationServices.framework' to the project
 ~~~
@@ -47,14 +47,14 @@ example_logger.stop();
   ```c++
   event::null_container = event::null_type
   ```  
-- Others
+- Function types
   ```c++
-  type                          -> std::function<void(type)>
-  return(param...)              -> std::function<return(parameter...)>
-  std::function<type>           -> std::function<type>
-  return(*)(param...)           -> function pointer
-  return(class::*)(param...)    -> member function pointer
-  lambda                        -> lambda
+  type                      -> std::function<void(type)>  
+  return_type(param...)     -> std::function<return_type(parameter...)>  
+  return_type(*)(param...)        
+  return_type(class::*)(param...) 
+  std::function<return_type(param)...>  
+  lambda  
   ```  
   
 ### Event Masks
