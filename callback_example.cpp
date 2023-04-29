@@ -43,7 +43,7 @@ int main() {
     event::keyboard::logger<
         decltype(&mem_fn_example::some_function),
         event::null_container,
-        event::keyboard::action_type
+        event::keyboard::traits::action
     > mem_fn_logger;
     
     mem_fn_example mem_fn;
@@ -66,7 +66,7 @@ int main() {
     event::keyboard::logger<
         decltype(lambda_func),
         event::null_container,
-        event::keyboard::key_type,
+        event::keyboard::traits::key,
         event::action::key_up
     > lambda_logger;
     
@@ -84,7 +84,7 @@ int main() {
     event::keyboard::logger<
         event::key::code,
         event::deque,
-        event::keyboard::key_type,
+        event::keyboard::traits::key,
         event::action::key_down
     > std_function_logger;
     
@@ -100,8 +100,8 @@ int main() {
         - It does not block other threads
      
         - Other threads can be blocked only on following function calls
-          |- start() -> this function inserts the callback function to __logger_base
-          |- stop()  -> this function removes the callback function from __logger_base
+          |- start() -> insert the callback function to __logger_base
+          |- stop()  -> remove the callback function from __logger_base
      */
     while (function_logger.is_running()) {
         if (not std_function_logger.empty()) {
@@ -118,8 +118,8 @@ int main() {
     /*
         [ Clean up ]
         - logger(__logger_base) is stopped when there is no callback to invoke
-        - logger(__logger_base) restarts when callback is needed
-        - logger(__logger_base) is destroyed on program exit(could not be destroyed during program run)
+        - logger(__logger_base) restarts when callback is newly submited
+        - logger(__logger_base) is destroyed on program exit
      */
     function_logger.stop();
     mem_fn_logger.stop();

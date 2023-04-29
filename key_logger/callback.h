@@ -10,11 +10,11 @@
 namespace event {
 namespace __detail {
 
-template <typename _Type>
-struct __callback_type_wrapper {
+template <typename _Traits>
+struct __callback_traits {
 public:
-    typedef typename _Type::key_type            key_type;
-    typedef typename _Type::action_type         action_type;
+    typedef typename _Traits::key_type          key_type;
+    typedef typename _Traits::action_type       action_type;
     typedef const key_type                      const_key;
     typedef const action_type                   const_action;
     typedef std::tuple<key_type, action_type>   value_type;
@@ -25,12 +25,12 @@ public:
     }
 };
 
-template <typename _Type>
-    requires __key_value_type<_Type>
-struct __callback_type_wrapper<_Type> {
-    typedef typename _Type::key_type            key_type;
-    typedef typename _Type::action_type         action_type;
-    typedef typename _Type::value_type          value_type;
+template <typename _Traits>
+    requires __key_value_type<_Traits>
+struct __callback_traits<_Traits> {
+    typedef typename _Traits::key_type          key_type;
+    typedef typename _Traits::action_type       action_type;
+    typedef typename _Traits::value_type        value_type;
     typedef const key_type                      const_key;
     typedef const action_type                   const_action;
 
@@ -40,12 +40,12 @@ struct __callback_type_wrapper<_Type> {
     }
 };
 
-template <typename _Type>
-    requires __action_value_type<_Type>
-struct __callback_type_wrapper<_Type> {
-    typedef typename _Type::key_type            key_type;
-    typedef typename _Type::action_type         action_type;
-    typedef typename _Type::value_type          value_type;
+template <typename _Traits>
+    requires __action_value_type<_Traits>
+struct __callback_traits<_Traits> {
+    typedef typename _Traits::key_type          key_type;
+    typedef typename _Traits::action_type       action_type;
+    typedef typename _Traits::value_type        value_type;
     typedef const key_type                      const_key;
     typedef const action_type                   const_action;
 
@@ -55,18 +55,18 @@ struct __callback_type_wrapper<_Type> {
     }
 };
 
-template <typename _Type>
-    requires __non_default_value_type<_Type>
-struct __callback_type_wrapper<_Type> {
-    typedef typename _Type::key_type            key_type;
-    typedef typename _Type::action_type         action_type;
-    typedef typename _Type::value_type          value_type;
+template <typename _Traits>
+    requires __non_default_value_type<_Traits>
+struct __callback_traits<_Traits> {
+    typedef typename _Traits::key_type          key_type;
+    typedef typename _Traits::action_type       action_type;
+    typedef typename _Traits::value_type        value_type;
     typedef const key_type                      const_key;
     typedef const action_type                   const_action;
 
     inline constexpr value_type
     operator()(const_key& __k, const_action& __a) {
-        return _Type()(__k, __a);
+        return _Traits()(__k, __a);
     }
 };
 
@@ -75,18 +75,18 @@ struct __callback_type_wrapper<_Type> {
 
 template <
     typename _FunctionT,
-    typename _Type
+    typename _Traits
 >
 class callback {
 protected:
-    typedef __detail::__callback_type_wrapper<_Type>        __type;
+    typedef __detail::__callback_traits<_Traits>            __traits;
     typedef __detail::__callable_type_wrapper<_FunctionT>   __invoker;
 public:
-    typedef typename __type::key_type                       key_type;
-    typedef typename __type::action_type                    action_type;
-    typedef typename __type::value_type                     value_type;
-    typedef typename __type::const_key                      const_key;
-    typedef typename __type::const_action                   const_action;
+    typedef typename __traits::key_type                     key_type;
+    typedef typename __traits::action_type                  action_type;
+    typedef typename __traits::value_type                   value_type;
+    typedef typename __traits::const_key                    const_key;
+    typedef typename __traits::const_action                 const_action;
     typedef typename __invoker::func_type                   func_type;
     typedef typename __invoker::return_type                 return_type;
     
@@ -104,28 +104,28 @@ public:
 protected:
     inline return_type
     __invoke_(const_key& __k, const_action& __a) {
-        return __c_(__type()(__k, __a));
+        return __c_(__traits()(__k, __a));
     }
     
     inline return_type
     __invoke_(const_key& __k, const_action& __a)
-    requires (__detail::__is_std_tuple<typename __type::value_type>::value)
+    requires (__detail::__is_std_tuple<typename __traits::value_type>::value)
     {
-        return std::apply(__c_, __type()(__k, __a));
+        return std::apply(__c_, __traits()(__k, __a));
     }
 };
 
 
-template <typename _Type>
-class callback<__detail::__null_type<>, _Type> {
+template <typename _Traits>
+class callback<__detail::__null_type<>, _Traits> {
 protected:
-    typedef __detail::__callback_type_wrapper<_Type>        __type;
+    typedef __detail::__callback_traits<_Traits>            __traits;
 public:
-    typedef typename __type::key_type                       key_type;
-    typedef typename __type::action_type                    action_type;
-    typedef typename __type::value_type                     value_type;
-    typedef typename __type::const_key                      const_key;
-    typedef typename __type::const_action                   const_action;
+    typedef typename __traits::key_type                     key_type;
+    typedef typename __traits::action_type                  action_type;
+    typedef typename __traits::value_type                   value_type;
+    typedef typename __traits::const_key                    const_key;
+    typedef typename __traits::const_action                 const_action;
     
 public:
     callback() = default;
@@ -138,18 +138,18 @@ protected:
 
 template <
     typename _FunctionT,
-    typename _Type
+    typename _Traits
 > requires __detail::__call_operator_type<_FunctionT>
-class callback<_FunctionT, _Type> {
+class callback<_FunctionT, _Traits> {
 protected:
-    typedef __detail::__callback_type_wrapper<_Type>        __type;
+    typedef __detail::__callback_traits<_Traits>            __traits;
     typedef __detail::__callable_type_wrapper<_FunctionT>   __invoker;
 public:
-    typedef typename __type::key_type                       key_type;
-    typedef typename __type::action_type                    action_type;
-    typedef typename __type::value_type                     value_type;
-    typedef typename __type::const_key                      const_key;
-    typedef typename __type::const_action                   const_action;
+    typedef typename __traits::key_type                     key_type;
+    typedef typename __traits::action_type                  action_type;
+    typedef typename __traits::value_type                   value_type;
+    typedef typename __traits::const_key                    const_key;
+    typedef typename __traits::const_action                 const_action;
     typedef typename __invoker::instance_type               instance_type;
     typedef typename __invoker::return_type                 return_type;
     typedef std::unique_ptr<instance_type>                  instance_pointer;
@@ -170,32 +170,32 @@ public:
 protected:
     inline return_type
     __invoke_(const_key& __k, const_action& __a) {
-        return (*__i_)(__type()(__k, __a));
+        return (*__i_)(__traits()(__k, __a));
     }
     
     inline return_type
     __invoke_(const_key& __k, const_action& __a)
-    requires (__detail::__is_std_tuple<typename __type::value_type>::value)
+    requires (__detail::__is_std_tuple<typename __traits::value_type>::value)
     {
-        return std::apply(*__i_, __type()(__k, __a));
+        return std::apply(*__i_, __traits()(__k, __a));
     }
 };
 
 
 template <
     typename _FunctionT,
-    typename _Type
+    typename _Traits
 > requires __detail::__member_function_type<_FunctionT>
-class callback<_FunctionT, _Type> {
+class callback<_FunctionT, _Traits> {
 protected:
-    typedef __detail::__callback_type_wrapper<_Type>        __type;
+    typedef __detail::__callback_traits<_Traits>            __traits;
     typedef __detail::__callable_type_wrapper<_FunctionT>   __invoker;
 public:
-    typedef typename __type::key_type                       key_type;
-    typedef typename __type::action_type                    action_type;
-    typedef typename __type::value_type                     value_type;
-    typedef typename __type::const_key                      const_key;
-    typedef typename __type::const_action                   const_action;
+    typedef typename __traits::key_type                     key_type;
+    typedef typename __traits::action_type                  action_type;
+    typedef typename __traits::value_type                   value_type;
+    typedef typename __traits::const_key                    const_key;
+    typedef typename __traits::const_action                 const_action;
     typedef typename __invoker::func_type                   func_type;
     typedef typename __invoker::instance_type               instance_type;
     typedef typename __invoker::return_type                 return_type;
@@ -238,15 +238,15 @@ public:
 protected:
     inline return_type
     __invoke_(const_key& __k, const_action& __a) {
-        return (__i_->*__f_)(__type()(__k, __a));
+        return (__i_->*__f_)(__traits()(__k, __a));
     }
     
     inline return_type
     __invoke_(const_key& __k, const_action& __a)
-    requires (__detail::__is_std_tuple<typename __type::value_type>::value)
+    requires (__detail::__is_std_tuple<typename __traits::value_type>::value)
     {
         return std::apply(__f_,
-            std::tuple_cat(std::make_tuple(__i_), __type()(__k, __a)));
+            std::tuple_cat(std::make_tuple(__i_), __traits()(__k, __a)));
     }
 };
 

@@ -25,16 +25,19 @@ struct __is_std_tuple : std::false_type {};
 template <typename... _T>
 struct __is_std_tuple<std::tuple<_T...>> : std::true_type {};
 
+template <std::size_t _Val, std::size_t... _Mask>
+concept __contain_value = ((_Val == _Mask) or ...);
+
 
 template <typename _T>
 concept __has_call_operator =
-    std::is_class_v<_T> &&
+    std::is_class_v<_T> and
     requires { &_T::operator(); };
 
 template <typename _T>
 concept __call_operator_type =
-    __has_call_operator<_T> &&
-    !__is_std_function<_T>::value;
+    __has_call_operator<_T> and
+    not __is_std_function<_T>::value;
 
 template <typename _T>
 concept __member_function_type =
@@ -120,11 +123,11 @@ template <
     typename action_type = typename _T::action_type
 >
 concept __non_default_value_type =
-    !__key_value_type<_T> &&
-    !__action_value_type<_T> &&
+    not __key_value_type<_T> and
+    not __action_value_type<_T> and
     requires(const key_type& __k, const action_type& __a) {
     {
-        _T::convert(__k, __a)
+        _T()(__k, __a)
     } -> std::convertible_to<typename _T::value_type>;
 };
 
@@ -137,24 +140,24 @@ struct __event_mask {
 
 template <std::size_t... _Mask>
 concept __mask_not_empty = requires {
-    __event_mask<_Mask...>::mask_size != 0;
+    __event_mask<_Mask...>::mask_size not_eq 0;
 };
 
 
 template <typename _T>
 concept __is_event_type =
-    std::is_same_v<_T, event::key::code> ||
+    std::is_same_v<_T, event::key::code> or
     std::is_same_v<_T, event::action::code>;
 
 
 template <typename _T> concept __is_key_type = std::is_same_v<_T, event::key::code>;
 template <typename _T> concept __is_action_type = std::is_same_v<_T, event::action::code>;
-template <typename... _T> concept __is_event_types = (__is_event_type<_T> && ...);
-template <typename... _T> concept __is_key_types = (__is_key_type<_T> && ...);
-template <typename... _T> concept __is_action_types = (__is_action_type<_T> && ...);
-template <typename... _T> concept __contain_event_type = (__is_event_type<_T> || ...);
-template <typename... _T> concept __contain_key_type = (__is_key_type<_T> || ...);
-template <typename... _T> concept __contain_action_type = (__is_action_type<_T> && ...);
+template <typename... _T> concept __is_event_types = (__is_event_type<_T> and ...);
+template <typename... _T> concept __is_key_types = (__is_key_type<_T> and ...);
+template <typename... _T> concept __is_action_types = (__is_action_type<_T> and ...);
+template <typename... _T> concept __contain_event_type = (__is_event_type<_T> or ...);
+template <typename... _T> concept __contain_key_type = (__is_key_type<_T> or ...);
+template <typename... _T> concept __contain_action_type = (__is_action_type<_T> or ...);
 
 } /* __detail */
 

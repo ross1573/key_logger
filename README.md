@@ -9,7 +9,7 @@ On macOS, please add 'ApplicationServices.framework' to the project
 ## Usage  
 1. create an logger object
 ```c++
-auto example_logger = event::keyboard::logger<callback, container, type, event_mask...>();
+auto example_logger = event::keyboard::logger<callback, container, traits, event_mask...>();
 ```  
 2. set callback function
 ```c++
@@ -62,10 +62,14 @@ example_logger.stop();
   ```c++
   event::action::key_down
   ```
-- key release
+- Key release
   ```c++
   event::action::key_up
-  ```
+  ```  
+- System keys
+  ```c++
+  event::action::key_system
+  ```  
 
 -----
 ## Windows

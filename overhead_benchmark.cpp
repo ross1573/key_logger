@@ -7,7 +7,7 @@
 auto make_lambda(auto& vec) {
     return [&](const event::key::code&) {
         volatile auto end = __rdtsc();
-        auto diff = end - event::logger<event::action::key_down>
+        auto diff = end - event::logger<event::action::key_down, event::action::key_system>
                                ::logger_type::callback_invoked_timepoint();
         vec.push_back((std::uint64_t)diff);
     };
@@ -18,7 +18,7 @@ using time_vec = std::vector<std::uint64_t>;
 using time_vec_arr = std::array<time_vec, logger_size>;
 using lambda_type = decltype(make_lambda(time_vec_arr()[-1]));
 using logger_type = event::keyboard::logger<lambda_type, event::null_container,
-    event::keyboard::key_type, event::action::key_down>;
+    event::keyboard::traits::key, event::action::key_down, event::action::key_system>;
 
 
 int main() {
@@ -36,20 +36,28 @@ int main() {
     counter = 0;
     
     auto logger2 = event::keyboard::logger<event::null_callback, event::deque,
-        event::keyboard::key_type, event::action::key_down>();
+        event::keyboard::traits::key, event::action::key_down, event::action::key_system>();
     logger2.start();
 
     while(logger2.is_running()) {
-        if (!logger2.empty()) {
-            auto input = logger2.back();
-            if (input == event::key::code::escape) {
-                logger2.stop();
-                break;
-            }
+        if (not logger2.empty()) {
+            switch (logger2.back()) {
+                case event::key::code::escape:
+                    logger2.stop();
+                    break;
             
-            if (input == event::key::enter) {
-                std::cout << logger2.get_string() << std::flush;
-                logger2.clear();
+                case event::key::enter:
+                    std::cout << logger2.get_string() << std::flush;
+                    logger2.clear();
+                    break;
+            
+                case event::key::backspace:
+                    logger2.pop_back();
+                    if (!logger2.empty())
+                        logger2.pop_back();
+                    break;
+                
+                default: break;
             }
         }
         
@@ -65,7 +73,7 @@ int main() {
         auto end = vec.end();
         auto vec_size = vec.size() - (std::size_t)cold_cache_ignore_size;
         
-        if (vec_size <= 0)
+        if (vec_size <= (std::size_t)cold_cache_ignore_size)
             return 0;
 
         std::sort(begin, end);

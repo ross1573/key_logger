@@ -80,12 +80,13 @@ private:
 #ifdef _APPL
     CFRunLoopRef __l_;
 #elif defined _WIN
+    DWORD __id_;
     HHOOK __h_;
     MSG __ms;
 #endif
 #if defined __RECORD_CHRONO_TIME || \
     defined __RECORD_RDTSC_TIME
-     time_point __tp = 0;
+    time_point __tp;
 #endif
     
 protected:
@@ -194,6 +195,8 @@ void __logger_base<_Mask...>::__stop_() {
     
 #ifdef _APPL
     CFRunLoopStop(__l_);
+#elif defined _WIN
+    PostThreadMessage(__id_, WM_QUIT, 0, 0);
 #endif
     __s_ = false;
 }
@@ -289,7 +292,10 @@ void __logger_base<_Mask...>::__init_win32() {
         std::cout << "Failed to create hook : " << GetLastError();
         return;
     }
-    while (!GetMessage(&__ms, nullptr, 0, 0) && __s_) {
+    __id_ = GetCurrentThreadId();
+
+    while (!GetMessage(&__ms, nullptr, 0, 0) 
+        && __ms.message not_eq WM_QUIT) {
         TranslateMessage(&__ms);
         DispatchMessage(&__ms);
     }
@@ -337,7 +343,7 @@ protected:
     bool __s_;
     
 protected:
-    __logger_common() = default;
+    __logger_common() : __id_(0), __s_(false) {};
     __logger_common(const _This&) = delete;
     __logger_common(_This&&) = delete;
     _This& operator=(const _This&) = delete;
@@ -347,7 +353,6 @@ protected:
 public:
     void start();
     void stop();
-    void restart();
     [[nodiscard]] inline bool is_running();
     
 protected:
@@ -363,6 +368,9 @@ __logger_common<_Mask...>::~__logger_common() {
 
 template <std::size_t... _Mask>
 void __logger_common<_Mask...>::start() {
+    if (__s_)
+        return;
+    
     __id_ = _Base::__i_->submit_callback(this,
         &__logger_common<_Mask...>::__callback_);
     __s_ = true;
@@ -374,11 +382,6 @@ void __logger_common<_Mask...>::stop() {
         _Base::__i_->remove_callback(__id_);
         __s_ = false;
     }
-}
-
-template <std::size_t... _Mask>
-void __logger_common<_Mask...>::restart() {
-    
 }
 
 template <std::size_t... _Mask>
